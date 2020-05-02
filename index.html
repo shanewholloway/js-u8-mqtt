@@ -23,6 +23,8 @@
 import MQTTClient from './esm/web/v4.mjs'
 
 const my_mqtt = new MQTTClient()
+// allow playing with my_mqtt from developer console
+window.my_mqtt = my_mqtt
 
 my_mqtt
   .on_msg('u8-mqtt-demo/topic/:arg', (kw, pkt) => {
