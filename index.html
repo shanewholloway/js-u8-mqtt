@@ -20,7 +20,7 @@
 
 <script type=module>
 //import MQTTClient from 'u8-mqtt/esm/web/v4.mjs'
-import MQTTClient from './esm/web/v4.min.mjs'
+import MQTTClient from './esm/web/v4.mjs'
 
 const my_mqtt = new MQTTClient()
 
@@ -35,8 +35,8 @@ my_mqtt
 
 // or connect using WebSockets
 my_mqtt
-  .with_websock('ws://127.0.0.1:9001')
-  //.with_websock('wss://test.mosquitto.org:8081')
+  //.with_websock('ws://127.0.0.1:9001')
+  .with_websock('wss://test.mosquitto.org:8081')
   .then(somewhere_in_your_code)
   
 
