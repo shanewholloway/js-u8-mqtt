@@ -1,0 +1,72 @@
+import {_mqtt_conn} from './_conn.jsy'
+import {_mqtt_topic_router} from './_router.jsy'
+import {_mqtt_dispatch, mqtt_pkt_proto} from './_dispatch.jsy'
+
+export default class MQTTBaseClient ::
+  constructor(opt) ::
+    this._conn_ = _mqtt_conn @ this, 
+      this._init_dispatch(opt, this)
+
+  static create(opt) :: return new this(opt)
+
+  // Core API:
+
+  auth(pkt) :: return this._send('auth', pkt, 'auth')
+  connect(pkt) :: return this._send('connect', pkt, 'connack')
+  disconnect(pkt) :: return this._send('disconnect', pkt)
+
+  subscribe(pkt, ex) ::
+    pkt = _as_topics(pkt, ex)
+    return this._send('subscribe', pkt, pkt)
+  unsubscribe(pkt, ex) ::
+    pkt = _as_topics(pkt, ex)
+    return this._send('unsubscribe', pkt, pkt)
+
+  publish(pkt) :: return _pub @ this, pkt.qos, pkt
+  post(topic, payload) :: return _pub @ this, 0, {topic, payload}
+  send(topic, payload) :: return _pub @ this, 1, {topic, payload}
+  json_post(topic, msg) :: return _pub @ this, 0, {topic, msg}
+  json_send(topic, msg) :: return _pub @ this, 1, {topic, msg}
+
+
+
+  /* async _send(type, pkt) -- provided by _transport */
+
+  static with(mqtt_session) ::
+    this.prototype.mqtt_session = mqtt_session
+    return this
+
+
+  _init_router(opt) ::
+    const router = _mqtt_topic_router(this)
+    this.on_msg = router.on_msg
+    return this.router = router
+
+  _init_dispatch(opt) ::
+    const router = this._init_router(opt, this)
+
+    const tgt = @{}
+      __proto__: this.mqtt_pkt_proto
+      mqtt_publish: router.invoke
+
+    return _mqtt_dispatch @ this, tgt
+
+
+Object.assign @ MQTTBaseClient.prototype, @{}
+  mqtt_pkt_proto
+
+
+function _pub(self, qos, pkt) ::
+  let key, {msg} = pkt
+  if undefined !== msg ::
+    pkt.payload = JSON.stringify(msg)
+  if qos > 0 :: key = pkt
+  return self._send @ 'publish', pkt, key
+
+function _as_topics(pkt, ex) ::
+  if 'string' === typeof pkt ::
+    return {topics:[pkt], ... ex}
+  if pkt[Symbol.iterator] ::
+    return {topics:[... pkt], ... ex}
+  return ex ? {...pkt, ...ex} : pkt
+

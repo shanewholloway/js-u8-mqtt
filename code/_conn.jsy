@@ -1,0 +1,38 @@
+
+export function _mqtt_conn(client, [on_mqtt, pkt_future]) ::
+  const q = [] // tiny version of deferred
+  q.then = y => void q.push(y)
+  q.notify = v => :: for const fn of q.splice(0,q.length) :: fn(v)
+
+  const _asy_send = @\ ...args ::> (await q)(...args)
+
+  client._send = _asy_send
+  return @{}
+    is_live: @=> _asy_send !== client._send
+    reset() :: client._send = _asy_send
+
+    set(mqtt_session, send_u8_pkt) ::
+      const [mqtt_decode, mqtt_encode] =
+        mqtt_session()
+
+
+      const on_mqtt_chunk = u8_buf =>
+        on_mqtt @
+          mqtt_decode(u8_buf)
+          client
+
+
+      const send_pkt = @\ type, pkt, key ::>
+        const res = undefined === key ? true
+          : pkt_future(key, pkt, client)
+
+        await send_u8_pkt @
+          mqtt_encode(type, pkt)
+
+        return res
+
+
+      client._send = send_pkt
+      q.notify(send_pkt)
+      return on_mqtt_chunk
+

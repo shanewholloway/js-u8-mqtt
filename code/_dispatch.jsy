@@ -1,0 +1,37 @@
+import {_mqtt_cmdid_dispatch} from './_cmdid_dispatch.jsy'
+
+export const mqtt_pkt_proto = @{}
+  mqtt_auth(pkt) ::
+  mqtt_connect(pkt) ::
+  mqtt_connack(pkt) ::
+  mqtt_disconnect(pkt) ::
+
+  mqtt_publish(pkt) ::
+  mqtt_subscribe(pkt) ::
+  mqtt_unsubscribe(pkt) ::
+
+  mqtt_pingreq(pkt) ::
+  mqtt_pingresp(pkt) ::
+
+
+export function _mqtt_dispatch(opt, target) ::
+  const _disp_ = _mqtt_cmdid_dispatch.create(target)
+  const { cmdids } = _disp_
+
+  // default rotate at 1s across 5 buckets
+  const { td: rotate_td=1000, n: rotate_n=5 } =
+    opt && opt.rotate || {}
+
+  let rotate_ts = rotate_td + Date.now()
+
+  return @[] on_mqtt,
+    _disp_.bind_pkt_future()
+
+  function on_mqtt(pkt_list, client) ::
+    for const pkt of pkt_list ::
+      cmdids[pkt.id] @ _disp_, pkt, client
+
+    if Date.now() > rotate_ts ::
+      _disp_.rotate_belt(rotate_n)
+      rotate_ts = rotate_td + Date.now()
+

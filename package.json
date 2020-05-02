@@ -1,0 +1,53 @@
+{
+  "name": "u8-mqtt",
+  "description": "MQTT packet codec using Uint8Array -- suitable for use in the Browser, NodeJS, and Deno.land.",
+  "version": "0.0.8",
+  "license": "BSD-2-Clause",
+  "author": "Shane Holloway <shane.holloway@ieee.org>",
+  "homepage": "https://github.com/shanewholloway/js-u8-mqtt#readme",
+  "bugs": {
+    "url": "https://github.com/shanewholloway/js-u8-mqtt/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/shanewholloway/js-u8-mqtt.git"
+  },
+  "files": [
+    "cjs/",
+    "code/",
+    "esm/"
+  ],
+  "type": "module",
+  "main": "./cjs/index.cjs",
+  "module": "./esm/index.mjs",
+  "exports": {
+    "./": "./",
+    ".": {
+      "import": "./esm/index.mjs",
+      "require": "./cjs/index.cjs"
+    }
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^7.1.3",
+    "qsrv": "^0.1.5",
+    "regexparam": "^1.3.0",
+    "rollup": "^2.7.3",
+    "rollup-plugin-dgnotify": "^0.1.5",
+    "rollup-plugin-jsy": "^1.7.1",
+    "rollup-plugin-terser": "^5.3.0",
+    "source-map-support": "^0.5.19",
+    "u8-mqtt-packet": "file:../js-u8-mqtt-packet"
+  },
+  "scripts": {
+    "start": "qsrv -- *.html esm/",
+    "clean": "rm -rf ./cjs/* ./esm/*",
+    "build": "rollup --config",
+    "watch": "npm -s run build -- --watch",
+    "pretest": "npm -s run build",
+    "test": "cd test; npm -s run test",
+    "test:install": "cd test; npm -s install",
+    "test:one": "cd test; npm -s run test:one",
+    "test:watch": "cd test; npm -s run test:watch"
+  }
+}
