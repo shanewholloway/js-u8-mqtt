@@ -40,6 +40,9 @@ const mqtt_encode_session =
     subscribe,
 */
 
+const as_utf8 = u8 =>
+  new TextDecoder('utf-8').decode @ u8
+
 const std_pkt_api = @{}
   utf8(u8) :: return as_utf8 @ u8 || this.payload
   json(u8) :: return JSON.parse @ as_utf8 @ u8 || this.payload

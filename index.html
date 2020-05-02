@@ -15,30 +15,28 @@
 <main>
   <h1>u8-mqtt</h1>
 
-  <a href='./demo/demo_web.html'><h3>Demo MQTT Web Client</h3></a>
-  <a href='./demo/demo_web_tiny.html'><h3>Demo Tiny MQTT Web Client</h3></a>
-
   <p><i>Look in the developer console</i></p>
 </main>
 
 <script type=module>
-//import MQTTClient from 'u8-mqtt/esm/client/web.mjs'
-//import MQTTClient from './esm/client/web.mjs'
-import MQTTClient from './esm/client/web.min.mjs'
+//import MQTTClient from 'u8-mqtt/esm/web/v4.mjs'
+import MQTTClient from './esm/web/v4.min.mjs'
 
 const my_mqtt = new MQTTClient()
 
-my_mqtt.router
-  .add('u8-mqtt-demo/topic/:arg', (kw, pkt) => {
+my_mqtt
+  .on_msg('u8-mqtt-demo/topic/:arg', (kw, pkt) => {
     console.log('topic:', kw, [kw.arg, pkt.utf8()])
   })
-  .add('u8-mqtt-demo/another/:first/:second', (kw, pkt) => {
+  .on_msg('u8-mqtt-demo/another/:first/:second', (kw, pkt) => {
     console.log('another:', kw, [kw.first, kw.second, pkt.utf8()])
   })
 
 
 // or connect using WebSockets
-my_mqtt.with_websock('ws://127.0.0.1:9001')
+my_mqtt
+  .with_websock('ws://127.0.0.1:9001')
+  //.with_websock('wss://test.mosquitto.org:8081')
   .then(somewhere_in_your_code)
   
 

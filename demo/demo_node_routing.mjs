@@ -1,15 +1,15 @@
-import MQTTClient from 'u8-mqtt-packet/esm/client/node.mjs'
+import MQTTClient from '../esm/node/v4.mjs'
 
 const delay = ms => new Promise(y => setTimeout(y,ms))
 
 async function main(name='noname') {
   const my_mqtt = new MQTTClient()
 
-  my_mqtt.router
-    .add('swh/:room_id/m/:from_id/:to_id', (kw, pkt) =>
+  my_mqtt
+    .on_msg('swh/:room_id/m/:from_id/:to_id', (kw, pkt) =>
       console.log("MESSAGE:", {kw, topic: pkt.topic, msg: pkt.json() }))
 
-    .add('swh/:room_id/p/:user_id', (kw, pkt) =>
+    .on_msg('swh/:room_id/p/:user_id', (kw, pkt) =>
       console.log("PRESENCE:", { kw, topic: pkt.topic, status: 0!==pkt.payload.length }))
 
 

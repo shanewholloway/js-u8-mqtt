@@ -44,9 +44,9 @@ function add_jsy(src_name, opt={}) {
 
   if (cfg_web)
     configs.push({ ... cfg_web, input,
-      output: { ... _out_, file: `esm/web/${src_name}.js`, format: 'es' }})
+      output: { ... _out_, file: `esm/web/${src_name}.mjs`, format: 'es' }})
 
   if ('undefined' !== typeof cfg_web_min)
     configs.push({ ... cfg_web_min, input,
-      output: { ... _out_, file: `esm/web/${src_name}.min.js`, format: 'es', sourcemap: false }})
+      output: { ... _out_, file: `esm/web/${src_name}.min.mjs`, format: 'es', sourcemap: false }})
 }

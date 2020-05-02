@@ -1,13 +1,13 @@
 // see ../index.html for Web Example Clinet
-import MQTTClient from 'u8-mqtt-packet/esm/client/node.mjs'
+import MQTTClient from '../esm/node/v4.mjs'
 
 const my_mqtt = new MQTTClient()
 
-my_mqtt.router
-  .add('u8-mqtt-demo/topic/:arg', (kw, pkt) => {
+my_mqtt
+  .on_msg('u8-mqtt-demo/topic/:arg', (kw, pkt) => {
     console.log('topic:', kw, [kw.arg, pkt.utf8()])
   })
-  .add('u8-mqtt-demo/another/:first/:second', (kw, pkt) => {
+  .on_msg('u8-mqtt-demo/another/:first/:second', (kw, pkt) => {
     console.log('another:', kw, [kw.first, kw.second, pkt.utf8()])
   })
 
