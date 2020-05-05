@@ -92,9 +92,11 @@ function _mqtt_raw_pkt_dispatch(u8_pkt_dispatch) {
       const res = [];
       while (true) {
         const u8_pkt = _mqtt_raw_pkt_decode_v(l, _pkt_ctx_);
-        if (undefined !== u8_pkt)
-          res.push( u8_pkt_dispatch(u8_pkt) );
-        else return res
+        if (undefined === u8_pkt) return res
+
+        const pkt = u8_pkt_dispatch(u8_pkt);
+        if (null != pkt)
+          res.push( pkt );
       }
     }
   }
@@ -429,6 +431,10 @@ function mqtt_decode_unsuback(ns) {
   ]);
 
   return ns[0xb] = _mqtt_decode_suback(_unsuback_reason_)
+}
+
+function mqtt_decode_pingxxx(ns) {
+  return ns[0xc] = ns[0xd] = pkt => pkt
 }
 
 function mqtt_decode_auth(ns) {
@@ -813,6 +819,7 @@ function mqtt_session_ctx() {
           mqtt_decode_publish,
           mqtt_decode_puback,
           mqtt_decode_pubxxx,
+          mqtt_decode_pingxxx,
           mqtt_decode_suback,
           mqtt_decode_unsuback,
           mqtt_decode_auth,]
@@ -837,11 +844,20 @@ function _mqtt_conn(client, [on_mqtt, pkt_future]) {
   q.notify = v => {for (const fn of q.splice(0,q.length)) {fn(v);} };
 
   const _asy_send = (async ( ...args ) => { (await q)(...args);});
+  const _ping = (() =>client._send('pingreq'));
 
+  let tid_ping;
   client._send = _asy_send;
   return {
     is_live: (() =>_asy_send !== client._send)
-  , reset() {client._send = _asy_send;}
+  , reset() {
+      tid_ping = clearInterval(tid_ping);
+      client._send = _asy_send;}
+
+  , ping(td) {
+      clearInterval(tid_ping);
+      tid_ping = setInterval(_ping, 1000 * td);
+      if (tid_ping.unref) {tid_ping.unref();} }
 
   , set(mqtt_session, send_u8_pkt) {
       const [mqtt_decode, mqtt_encode] =
@@ -901,38 +917,39 @@ function _msg_ignore(pkt, params, ctx) {ctx.done = true;}
 
 function _mqtt_topic_router() {
   const pri_lsts=[[],[]];
-  const self ={
-    invoke, on_msg, add: on_msg
-  , find: topic => _mqtt_routes_iter(pri_lsts, topic)};
-  return self
+  const find = topic => _mqtt_routes_iter(pri_lsts, topic);
 
-  function on_msg(...args) {
-    let fn = args.pop();
-    if ('function' !== typeof fn) {
-      if (false === fn) {
-        fn = _msg_ignore;}
-      else throw new TypeError()}
+  return {find,
 
-    const priority = true === args[0] && args.shift();
+    add(...args) {
+      let fn = args.pop();
+      if ('function' !== typeof fn) {
+        if (false === fn) {
+          fn = _msg_ignore;}
+        else throw new TypeError()}
 
-    const route = _rxp_parse(args.shift());
-    route.tgt = fn;
-    pri_lsts[priority?0:1].push(route);
-    return self}
+      const priority = true === args[0] && args.shift();
 
-  async function invoke(pkt, ctx) {
-    ctx.idx = 0;
+      let rte = _rxp_parse(
+        args.shift()
+          .replace(/[+#]$/, '*'));
+      rte.tgt = fn;
+      pri_lsts[priority?0:1].push(rte);
+      return this}
 
-    for (const [fn, params] of self.find(pkt.topic)) {
-      await fn(pkt, params, ctx);
+  , async invoke(pkt, ctx) {
+      ctx.idx = 0;
 
-      if (ctx.done) {
-        break}
-      else ctx.idx++;}
+      for (const [fn, params] of find(pkt.topic)) {
+        await fn(pkt, params, ctx);
 
-    const {pkt_id, qos} = pkt;
-    if (1 === qos) {
-      await ctx.mqtt.puback({pkt_id});} } }
+        if (ctx.done) {
+          break}
+        else ctx.idx++;}
+
+      const {pkt_id, qos} = pkt;
+      if (1 === qos) {
+        await ctx.mqtt._send('puback', {pkt_id});} } } }
 
 
 function * _mqtt_routes_iter(all_route_lists, topic) {
@@ -1081,33 +1098,57 @@ class MQTTBaseClient {
 
   // Core API:
 
-  auth(pkt) {return this._send('auth', pkt, 'auth')}
-  connect(pkt) {return this._send('connect', pkt, 'connack')}
-  disconnect(pkt) {return this._send('disconnect', pkt)}
+  new_client_id(pre='u8-mqtt--') {
+    return pre + Math.random().toString(36).slice(2)}
 
-  ping() { return this._send('pingreq') }
+  auth(pkt={}) {
+    return this._send('auth', pkt, 'auth')}
 
+  async connect(pkt={}) {
+    if (! pkt.client_id) {
+      pkt.client_id = this.new_client_id();}
+    if (! pkt.keep_alive) {
+      pkt.keep_alive = 60;}
+
+    const res = await this._send('connect', pkt, 'connack');
+    // TODO: merge with server's keep_alive frequency
+
+    this._conn_.ping(pkt.keep_alive);
+    return res}
+
+  async disconnect(pkt={}) {
+    const res = await this._send('disconnect', pkt);
+    this._conn_.reset();
+    return res}
+
+  ping() {return this._send('pingreq', null, 'pingresp')}
+
+  // alias: sub
   subscribe(pkt, ex) {
     pkt = _as_topics(pkt, ex);
     return this._send('subscribe', pkt, pkt)}
+
+  // alias: unsub
   unsubscribe(pkt, ex) {
     pkt = _as_topics(pkt, ex);
     return this._send('unsubscribe', pkt, pkt)}
 
-  puback(pkt) {return this._send('puback', pkt)}
+  // alias: pub
   publish(pkt) {return _pub(this, pkt.qos, pkt)}
   post(topic, payload) {return _pub(this, 0, {topic, payload})}
   send(topic, payload) {return _pub(this, 1, {topic, payload})}
   json_post(topic, msg) {return _pub(this, 0, {topic, msg, arg:'msg'})}
   json_send(topic, msg) {return _pub(this, 1, {topic, msg, arg:'msg'})}
 
-  msg_subscribe(topic, ...args) {
-    this.on_msg(true, topic, args.pop());
-    return this.subscribe([
-      [topic, args.shift()|0 ] ]) }// qos
+  // alias: sub_route
+  subscribe_route(topic, ...args) {
+    this.add_route(true, topic, args.pop());
+    this.subscribe([
+      [topic, args.shift()|0 ] ]);// qos
+    return this}
 
 
-  /* async _send(type, pkt) -- provided by _transport */
+  /* async _send(type, pkt) -- provided by _conn_ and transport */
 
   static with(mqtt_session) {
     this.prototype.mqtt_session = mqtt_session;
@@ -1116,7 +1157,7 @@ class MQTTBaseClient {
 
   _init_router(opt) {
     const router = _mqtt_topic_router();
-    this.on_msg = router.on_msg;
+    this.add_route = router.add;
     return this.router = router}
 
   _init_dispatch(opt) {
@@ -1129,8 +1170,14 @@ class MQTTBaseClient {
     return _mqtt_dispatch(this, tgt) } }
 
 
-Object.assign(MQTTBaseClient.prototype,{
-  mqtt_pkt_proto} );
+ {
+  const p = MQTTBaseClient.prototype;
+  Object.assign(p,{
+    mqtt_pkt_proto
+  , pub: p.publish
+  , sub_route: p.subscribe_route
+  , sub: p.subscribe
+  , unsub: p.unsubscribe} ); }
 
 
 function _pub(self, qos, pkt) {

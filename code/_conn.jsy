@@ -5,11 +5,20 @@ export function _mqtt_conn(client, [on_mqtt, pkt_future]) ::
   q.notify = v => :: for const fn of q.splice(0,q.length) :: fn(v)
 
   const _asy_send = @\ ...args ::> (await q)(...args)
+  const _ping = @=> client._send('pingreq')
 
+  let tid_ping
   client._send = _asy_send
   return @{}
     is_live: @=> _asy_send !== client._send
-    reset() :: client._send = _asy_send
+    reset() ::
+      tid_ping = clearInterval(tid_ping)
+      client._send = _asy_send
+
+    ping(td) ::
+      clearInterval(tid_ping)
+      tid_ping = setInterval(_ping, 1000 * td)
+      if tid_ping.unref :: tid_ping.unref()
 
     set(mqtt_session, send_u8_pkt) ::
       const [mqtt_decode, mqtt_encode] =

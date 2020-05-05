@@ -1,7 +1,7 @@
 # u8-mqtt
 
 - See [u8-mqtt-packet][] for MQTT packet parser details
-- See [regexparam][] for routing rule details for `route` of `.on_msg(route, fn(pkt, params, ctx)=>{})`
+- See [regexparam][] for routing rule details for `route` of `.subscribe_route(route, fn(pkt, params, ctx)=>{})`
 
  [u8-mqtt-packet]: https://github.com/shanewholloway/js-u8-mqtt-packet
  [regexparam]: https://github.com/lukeed/regexparam#readme 

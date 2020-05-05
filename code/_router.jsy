@@ -7,38 +7,39 @@ function _msg_ignore(pkt, params, ctx) :: ctx.done = true
 
 export function _mqtt_topic_router() ::
   const pri_lsts=[[],[]]
-  const self = @{}
-    invoke, on_msg, add: on_msg
-    find: topic => _mqtt_routes_iter(pri_lsts, topic)
-  return self
+  const find = topic => _mqtt_routes_iter(pri_lsts, topic)
 
-  function on_msg(...args) ::
-    let fn = args.pop()
-    if 'function' !== typeof fn ::
-      if false === fn ::
-        fn = _msg_ignore
-      else throw new TypeError()
+  return @{} find,
 
-    const priority = true === args[0] && args.shift()
+    add(...args) ::
+      let fn = args.pop()
+      if 'function' !== typeof fn ::
+        if false === fn ::
+          fn = _msg_ignore
+        else throw new TypeError()
 
-    const route = _rxp_parse(args.shift())
-    route.tgt = fn
-    pri_lsts[priority?0:1].push(route)
-    return self
+      const priority = true === args[0] && args.shift()
 
-  async function invoke(pkt, ctx) ::
-    ctx.idx = 0
+      let rte = _rxp_parse @
+        args.shift()
+          .replace(/[+#]$/, '*')
+      rte.tgt = fn
+      pri_lsts[priority?0:1].push(rte)
+      return this
 
-    for const [fn, params] of self.find(pkt.topic) ::
-      await fn(pkt, params, ctx)
+    async invoke(pkt, ctx) ::
+      ctx.idx = 0
 
-      if ctx.done ::
-        break
-      else ctx.idx++
+      for const [fn, params] of find(pkt.topic) ::
+        await fn(pkt, params, ctx)
 
-    const {pkt_id, qos} = pkt
-    if 1 === qos ::
-      await ctx.mqtt.puback({pkt_id})
+        if ctx.done ::
+          break
+        else ctx.idx++
+
+      const {pkt_id, qos} = pkt
+      if 1 === qos ::
+        await ctx.mqtt._send('puback', {pkt_id})
 
 
 export function * _mqtt_routes_iter(all_route_lists, topic) ::
