@@ -19,12 +19,12 @@ export function _mqtt_conn(client, [on_mqtt, pkt_future]) ::
       const on_mqtt_chunk = u8_buf =>
         on_mqtt @
           mqtt_decode(u8_buf)
-          client
+          {mqtt: client}
 
 
       const send_pkt = @\ type, pkt, key ::>
-        const res = undefined === key ? true
-          : pkt_future(key, pkt, client)
+        const res = undefined !== key
+          ? pkt_future(key) : true
 
         await send_u8_pkt @
           mqtt_encode(type, pkt)

@@ -4,7 +4,7 @@ import {_mqtt_dispatch, mqtt_pkt_proto} from './_dispatch.jsy'
 
 export default class MQTTBaseClient ::
   constructor(opt) ::
-    this._conn_ = _mqtt_conn @ this, 
+    this._conn_ = _mqtt_conn @ this,
       this._init_dispatch(opt, this)
 
   static create(opt) :: return new this(opt)
@@ -25,9 +25,13 @@ export default class MQTTBaseClient ::
   publish(pkt) :: return _pub @ this, pkt.qos, pkt
   post(topic, payload) :: return _pub @ this, 0, {topic, payload}
   send(topic, payload) :: return _pub @ this, 1, {topic, payload}
-  json_post(topic, msg) :: return _pub @ this, 0, {topic, msg}
-  json_send(topic, msg) :: return _pub @ this, 1, {topic, msg}
+  json_post(topic, msg) :: return _pub @ this, 0, {topic, msg, arg:'msg'}
+  json_send(topic, msg) :: return _pub @ this, 1, {topic, msg, arg:'msg'}
 
+  msg_subscribe(topic, ...args) ::
+    this.on_msg @ true, topic, args.pop()
+    return this.subscribe @#
+      @[] topic, args.shift()|0 // qos
 
 
   /* async _send(type, pkt) -- provided by _transport */
@@ -57,9 +61,14 @@ Object.assign @ MQTTBaseClient.prototype, @{}
 
 
 function _pub(self, qos, pkt) ::
-  let key, {msg} = pkt
-  if undefined !== msg ::
+  let key, {msg, payload} = pkt
+  if undefined === payload ::
+    if undefined === msg ::
+      const arg = pkt.arg || 'payload'
+      return v => _pub @ self, qos, {...pkt, [arg]: v}
+
     pkt.payload = JSON.stringify(msg)
+
   if qos > 0 :: key = pkt
   return self._send @ 'publish', pkt, key
 

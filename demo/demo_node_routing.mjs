@@ -6,11 +6,11 @@ async function main(name='noname') {
   const my_mqtt = new MQTTClient()
 
   my_mqtt
-    .on_msg('swh/:room_id/m/:from_id/:to_id', (kw, pkt) =>
-      console.log("MESSAGE:", {kw, topic: pkt.topic, msg: pkt.json() }))
+    .on_msg('swh/:room_id/m/:from_id/:to_id', (pkt, params, ctx) =>
+      console.log("MESSAGE:", { params, topic: pkt.topic, msg: pkt.json() }))
 
-    .on_msg('swh/:room_id/p/:user_id', (kw, pkt) =>
-      console.log("PRESENCE:", { kw, topic: pkt.topic, status: 0!==pkt.payload.length }))
+    .on_msg('swh/:room_id/p/:user_id', (pkt, params, ctx) =>
+      console.log("PRESENCE:", { params, topic: pkt.topic, status: 0!==pkt.payload.length }))
 
 
   my_mqtt.with_tcp(1883, '127.0.0.1')

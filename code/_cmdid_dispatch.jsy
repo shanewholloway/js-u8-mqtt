@@ -58,15 +58,15 @@ export const _mqtt_cmdid_dispatch = @{}
     function by_id(disp, pkt) ::
       disp.answer @ pkt.pkt_id, pkt
 
-    function by_type(disp, pkt, client) ::
+    function by_type(disp, pkt, ctx) ::
       disp.answer @ pkt.type_obj.type, pkt
-      by_evt(disp, pkt, client)
+      by_evt(disp, pkt, ctx)
 
-    async function by_evt({target}, pkt, client) ::
+    async function by_evt({target}, pkt, ctx) ::
       const fn = target[`mqtt_${pkt.type_obj.type}`]
         || target.mqtt_pkt
 
       if undefined !== fn ::
-        await fn.call(target, pkt, client)
+        await fn.call(target, pkt, ctx)
 
 

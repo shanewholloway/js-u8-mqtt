@@ -3,49 +3,67 @@
 
 import _rxp_parse from 'regexparam/dist/regexparam.mjs'
 
+function _msg_ignore(pkt, params, ctx) :: ctx.done = true
+
 export function _mqtt_topic_router() ::
-  const lst=[], find=_iter_topic_routes.bind(null, lst)
-  const self = @{} find, invoke, on_msg, add: on_msg
+  const pri_lsts=[[],[]]
+  const self = @{}
+    invoke, on_msg, add: on_msg
+    find: topic => _mqtt_routes_iter(pri_lsts, topic)
   return self
 
-  function on_msg(route, tgt) ::
-    route = _rxp_parse(route)
-    route.tgt = tgt
-    lst.push(route)
+  function on_msg(...args) ::
+    let fn = args.pop()
+    if 'function' !== typeof fn ::
+      if false === fn ::
+        fn = _msg_ignore
+      else throw new TypeError()
+
+    const priority = true === args[0] && args.shift()
+
+    const route = _rxp_parse(args.shift())
+    route.tgt = fn
+    pri_lsts[priority?0:1].push(route)
     return self
 
-  function invoke(pkt) ::
-    for const [fn, kw] of find(pkt.topic) ::
-      return undefined !== kw
-        ? fn(kw, pkt)
-        : fn(pkt)
+  function invoke(pkt, ctx) ::
+    ctx.idx = 0
+    for const [fn, params] of self.find(pkt.topic) ::
+      fn(pkt, params, ctx)
+
+      if ctx.done :: return
+      else ctx.idx++
 
 
+export function * _mqtt_routes_iter(all_route_lists, topic) ::
+  for const route_list of all_route_lists ::
+    for const route of route_list ::
+      const res = _mqtt_route_match_one(topic, route)
+      if undefined !== res ::
+        yield res
 
-function * _iter_topic_routes(route_list, topic) ::
-  for const route of route_list ::
-    const {keys, pattern, tgt} = route
 
-    const match = pattern.exec('/'+topic)
-    if null === match ::
-      continue
+export function _mqtt_route_match_one(topic, {keys, pattern, tgt}) ::
+  const match = pattern.exec('/'+topic)
+  if null === match ::
+    return
 
-    if false === keys ::
-      const {groups} = match
-      if groups ::
-        const kw = {}
-        for let k in groups ::
-          kw[k] = groups[k]
+  if false === keys ::
+    const {groups} = match
+    if ! groups ::
+      return [tgt]
 
-        yield [tgt, kw]
+    const params = {}
+    for let k in groups ::
+      params[k] = groups[k]
 
-      else yield [tgt]
+    return [tgt, params]
 
-    else if 0 !== keys.length ::
-      const kw = {}
-      for let i=0; i<keys.length; i++ ::
-        kw[ keys[i] ] = match[1+i]
-      yield [tgt, kw]
+  if 0 === keys.length ::
+    return [tgt]
 
-    else yield [tgt]
+  const params = {}
+  for let i=0; i<keys.length; i++ ::
+    params[ keys[i] ] = match[1+i]
+  return [tgt, params]
 

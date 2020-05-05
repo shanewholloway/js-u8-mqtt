@@ -962,12 +962,12 @@ function _mqtt_conn(client, [on_mqtt, pkt_future]) {
       const on_mqtt_chunk = u8_buf =>
         on_mqtt(
           mqtt_decode(u8_buf)
-        , client);
+        , {mqtt: client});
 
 
       const send_pkt = (async ( type, pkt, key ) => {
-        const res = undefined === key ? true
-          : pkt_future(key, pkt, client);
+        const res = undefined !== key
+          ? pkt_future(key) : true;
 
         await send_u8_pkt(
           mqtt_encode(type, pkt));
@@ -1008,51 +1008,69 @@ function _rxp_parse (str, loose) {
 
 // Use [regexparam][] for url-like topic parsing
 
+function _msg_ignore(pkt, params, ctx) {ctx.done = true;}
+
 function _mqtt_topic_router() {
-  const lst=[], find=_iter_topic_routes.bind(null, lst);
-  const self ={find, invoke, on_msg, add: on_msg};
+  const pri_lsts=[[],[]];
+  const self ={
+    invoke, on_msg, add: on_msg
+  , find: topic => _mqtt_routes_iter(pri_lsts, topic)};
   return self
 
-  function on_msg(route, tgt) {
-    route = _rxp_parse(route);
-    route.tgt = tgt;
-    lst.push(route);
+  function on_msg(...args) {
+    let fn = args.pop();
+    if ('function' !== typeof fn) {
+      if (false === fn) {
+        fn = _msg_ignore;}
+      else throw new TypeError()}
+
+    const priority = true === args[0] && args.shift();
+
+    const route = _rxp_parse(args.shift());
+    route.tgt = fn;
+    pri_lsts[priority?0:1].push(route);
     return self}
 
-  function invoke(pkt) {
-    for (const [fn, kw] of find(pkt.topic)) {
-      return undefined !== kw
-        ? fn(kw, pkt)
-        : fn(pkt)} } }
+  function invoke(pkt, ctx) {
+    ctx.idx = 0;
+    for (const [fn, params] of self.find(pkt.topic)) {
+      fn(pkt, params, ctx);
+
+      if (ctx.done) {return}
+      else ctx.idx++;} } }
 
 
+function * _mqtt_routes_iter(all_route_lists, topic) {
+  for (const route_list of all_route_lists) {
+    for (const route of route_list) {
+      const res = _mqtt_route_match_one(topic, route);
+      if (undefined !== res) {
+        yield res;} } } }
 
-function * _iter_topic_routes(route_list, topic) {
-  for (const route of route_list) {
-    const {keys, pattern, tgt} = route;
 
-    const match = pattern.exec('/'+topic);
-    if (null === match) {
-      continue}
+function _mqtt_route_match_one(topic, {keys, pattern, tgt}) {
+  const match = pattern.exec('/'+topic);
+  if (null === match) {
+    return}
 
-    if (false === keys) {
-      const {groups} = match;
-      if (groups) {
-        const kw = {};
-        for (let k in groups) {
-          kw[k] = groups[k];}
+  if (false === keys) {
+    const {groups} = match;
+    if (! groups) {
+      return [tgt]}
 
-        yield [tgt, kw];}
+    const params = {};
+    for (let k in groups) {
+      params[k] = groups[k];}
 
-      else yield [tgt];}
+    return [tgt, params]}
 
-    else if (0 !== keys.length) {
-      const kw = {};
-      for (let i=0; i<keys.length; i++) {
-        kw[ keys[i] ] = match[1+i];}
-      yield [tgt, kw];}
+  if (0 === keys.length) {
+    return [tgt]}
 
-    else yield [tgt];} }
+  const params = {};
+  for (let i=0; i<keys.length; i++) {
+    params[ keys[i] ] = match[1+i];}
+  return [tgt, params]}
 
 const _mqtt_cmdid_dispatch ={
   create(target) {
@@ -1113,16 +1131,16 @@ const _mqtt_cmdid_dispatch ={
     function by_id(disp, pkt) {
       disp.answer(pkt.pkt_id, pkt); }
 
-    function by_type(disp, pkt, client) {
+    function by_type(disp, pkt, ctx) {
       disp.answer(pkt.type_obj.type, pkt);
-      by_evt(disp, pkt, client);}
+      by_evt(disp, pkt, ctx);}
 
-    async function by_evt({target}, pkt, client) {
+    async function by_evt({target}, pkt, ctx) {
       const fn = target[`mqtt_${pkt.type_obj.type}`]
         || target.mqtt_pkt;
 
       if (undefined !== fn) {
-        await fn.call(target, pkt, client);} } })()) };
+        await fn.call(target, pkt, ctx);} } })()) };
 
 const mqtt_pkt_proto ={
   mqtt_auth(pkt) {}
@@ -1151,9 +1169,9 @@ function _mqtt_dispatch(opt, target) {
   return [on_mqtt,
     _disp_.bind_pkt_future()]
 
-  function on_mqtt(pkt_list, client) {
+  function on_mqtt(pkt_list, ctx) {
     for (const pkt of pkt_list) {
-      cmdids[pkt.id](_disp_, pkt, client); }
+      cmdids[pkt.id](_disp_, pkt, ctx); }
 
     if (Date.now() > rotate_ts) {
       _disp_.rotate_belt(rotate_n);
@@ -1161,7 +1179,7 @@ function _mqtt_dispatch(opt, target) {
 
 class MQTTBaseClient {
   constructor(opt) {
-    this._conn_ = _mqtt_conn(this, 
+    this._conn_ = _mqtt_conn(this,
       this._init_dispatch(opt, this)); }
 
   static create(opt) {return new this(opt)}
@@ -1182,9 +1200,13 @@ class MQTTBaseClient {
   publish(pkt) {return _pub(this, pkt.qos, pkt)}
   post(topic, payload) {return _pub(this, 0, {topic, payload})}
   send(topic, payload) {return _pub(this, 1, {topic, payload})}
-  json_post(topic, msg) {return _pub(this, 0, {topic, msg})}
-  json_send(topic, msg) {return _pub(this, 1, {topic, msg})}
+  json_post(topic, msg) {return _pub(this, 0, {topic, msg, arg:'msg'})}
+  json_send(topic, msg) {return _pub(this, 1, {topic, msg, arg:'msg'})}
 
+  msg_subscribe(topic, ...args) {
+    this.on_msg(true, topic, args.pop());
+    return this.subscribe([
+      [topic, args.shift()|0 ] ]) }// qos
 
 
   /* async _send(type, pkt) -- provided by _transport */
@@ -1214,9 +1236,14 @@ Object.assign(MQTTBaseClient.prototype,{
 
 
 function _pub(self, qos, pkt) {
-  let key, {msg} = pkt;
-  if (undefined !== msg) {
+  let key, {msg, payload} = pkt;
+  if (undefined === payload) {
+    if (undefined === msg) {
+      const arg = pkt.arg || 'payload';
+      return v => _pub(self, qos, {...pkt, [arg]: v}) }
+
     pkt.payload = JSON.stringify(msg);}
+
   if (qos > 0) {key = pkt;}
   return self._send('publish', pkt, key) }
 

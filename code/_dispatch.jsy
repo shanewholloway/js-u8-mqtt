@@ -27,9 +27,9 @@ export function _mqtt_dispatch(opt, target) ::
   return @[] on_mqtt,
     _disp_.bind_pkt_future()
 
-  function on_mqtt(pkt_list, client) ::
+  function on_mqtt(pkt_list, ctx) ::
     for const pkt of pkt_list ::
-      cmdids[pkt.id] @ _disp_, pkt, client
+      cmdids[pkt.id] @ _disp_, pkt, ctx
 
     if Date.now() > rotate_ts ::
       _disp_.rotate_belt(rotate_n)
