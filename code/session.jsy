@@ -1,44 +1,43 @@
 import {
-  _mqtt_pkt_id_dispatch,
-  _mqtt_bind_encode,
-  _bind_mqtt_session,
+  _bind_mqtt_suite,
 
-  mqtt_decode_session,
-  mqtt_encode_session,
-
-  /*
-  // Server to Client Types: connack, publish, suback
-  mqtt_decode_noop as noop,
   mqtt_decode_connack,
-  mqtt_decode_suback,
   mqtt_decode_publish,
+  mqtt_decode_puback,
+  mqtt_decode_pubxxx,
+  mqtt_decode_suback,
+  mqtt_decode_unsuback,
+  mqtt_decode_auth,
 
-  // Client to Server Types: connect, disconnect, publish, subscribe
-  mqtt_encode_auth as auth,
-  mqtt_encode_connect as connect,
-  mqtt_encode_disconnect as disconnect,
-  mqtt_encode_publish as publish,
-  mqtt_encode_subscribe as subscribe,
-  */
-} from 'u8-mqtt-packet'
+  mqtt_encode_connect,
+  mqtt_encode_disconnect,
+  mqtt_encode_publish,
+  mqtt_encode_subscribe,
+  mqtt_encode_unsubscribe,
+  mqtt_encode_auth,
+} from 'u8-mqtt-packet/esm/codec.mjs'
 
 
-/*
-const mqtt_decode_session =
-  _mqtt_pkt_id_dispatch @!
-    const ops_by_id = Array(17).fill(noop)
-    ops_by_id[0x2] = mqtt_decode_connack
-    ops_by_id[0x3] = mqtt_decode_publish
-    ops_by_id[0x9] = mqtt_decode_suback
+const _mqtt_decode_all = [
+    mqtt_decode_connack,
+    mqtt_decode_publish,
+    mqtt_decode_puback,
+    mqtt_decode_pubxxx,
+    mqtt_decode_suback,
+    mqtt_decode_unsuback,
+    mqtt_decode_auth,
+  ]
 
-const mqtt_encode_session =
-  _mqtt_bind_encode @:
-    auth,
-    connect,
-    disconnect,
-    publish,
-    subscribe,
-*/
+const _mqtt_encode_all = [
+    mqtt_encode_connect,
+    mqtt_encode_disconnect,
+    mqtt_encode_publish,
+    mqtt_encode_subscribe,
+    mqtt_encode_unsubscribe,
+    mqtt_encode_auth,
+  ]
+
+
 
 const as_utf8 = u8 =>
   new TextDecoder('utf-8').decode @ u8
@@ -47,15 +46,17 @@ const std_pkt_api = @{}
   utf8(u8) :: return as_utf8 @ u8 || this.payload
   json(u8) :: return JSON.parse @ as_utf8 @ u8 || this.payload
 
-export const mqtt_session_v4 =
-  _bind_mqtt_session @
-    mqtt_decode_session
-    mqtt_encode_session
-    @{} mqtt_level: 4, ... std_pkt_api
 
-export const mqtt_session_v5 =
-  _bind_mqtt_session @
-    mqtt_decode_session
-    mqtt_encode_session
-    @{} mqtt_level: 5, ... std_pkt_api
+
+export const {
+
+    decode: mqtt_decode_session,
+    encode: mqtt_encode_session,
+    v4: mqtt_session_v4,
+    v5: mqtt_session_v5,
+
+  } = _bind_mqtt_suite(
+        _mqtt_decode_all,
+        _mqtt_encode_all,
+        std_pkt_api)
 
