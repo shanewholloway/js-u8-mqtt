@@ -16,9 +16,11 @@ export function _mqtt_conn(client, [on_mqtt, pkt_future]) ::
       client._send = _asy_send
 
     ping(td) ::
-      clearInterval(tid_ping)
-      tid_ping = setInterval(_ping, 1000 * td)
-      if tid_ping.unref :: tid_ping.unref()
+      tid_ping = clearInterval(tid_ping)
+      if td ::
+        tid_ping = setInterval(_ping, 1000 * td)
+        if tid_ping.unref ::
+          tid_ping.unref()
 
     set(mqtt_session, send_u8_pkt) ::
       const [mqtt_decode, mqtt_encode] =

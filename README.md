@@ -20,10 +20,10 @@ import MQTTClient from 'u8-mqtt-packet/esm/web/v4.mjs'
 const my_mqtt = new MQTTClient()
 
 my_mqtt
-  .on_msg('u8-mqtt-demo/topic/:arg', (pkt, params, ctx) => {
+  .subscribe_route('u8-mqtt-demo/topic/:arg', (pkt, params, ctx) => {
     console.log('topic:', params, [params.arg, pkt.utf8()])
   })
-  .on_msg('u8-mqtt-demo/another/:first/:second', (pkt, params, ctx) => {
+  .sub_route('u8-mqtt-demo/another/:first/:second', (pkt, params, ctx) => {
     console.log('another:', params, [params.first, params.second, pkt.utf8()])
   })
 
