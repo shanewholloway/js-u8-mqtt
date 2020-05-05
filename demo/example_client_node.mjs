@@ -21,7 +21,7 @@ my_mqtt.with_tcp(1883, '127.0.0.1')
 async function somewhere_in_your_code() {
 
   await my_mqtt.connect({
-    client_id: 'u8-mqtt-packet-demo-node',
+    client_id: `u8-mqtt--${Math.random().toString(36).slice(2)}`,
     will: {
       topic: 'u8-mqtt-demo/bye',
       payload: 'gone!',
@@ -29,18 +29,18 @@ async function somewhere_in_your_code() {
   })
 
   await my_mqtt.subscribe([
-    'u8-mqtt-demo/another/#',
-    'u8-mqtt-demo/topic/+',
-    'u8-mqtt-demo/bye',
+    ['u8-mqtt-demo/another/#', 1],
+    ['u8-mqtt-demo/topic/+', 1],
+    ['u8-mqtt-demo/bye', 1],
   ])
 
   my_mqtt.publish({
     topic: 'u8-mqtt-demo/topic/node-side-fun-test',
     payload: 'awesome from both web and node',
+    qos: 1,
   })
 
   my_mqtt.send(
     'u8-mqtt-demo/another/apple/orange',
     'Node-side Fruity fun')
-
 }

@@ -26,13 +26,19 @@ export function _mqtt_topic_router() ::
     pri_lsts[priority?0:1].push(route)
     return self
 
-  function invoke(pkt, ctx) ::
+  async function invoke(pkt, ctx) ::
     ctx.idx = 0
-    for const [fn, params] of self.find(pkt.topic) ::
-      fn(pkt, params, ctx)
 
-      if ctx.done :: return
+    for const [fn, params] of self.find(pkt.topic) ::
+      await fn(pkt, params, ctx)
+
+      if ctx.done ::
+        break
       else ctx.idx++
+
+    const {pkt_id, qos} = pkt
+    if 1 === qos ::
+      await ctx.mqtt.puback({pkt_id})
 
 
 export function * _mqtt_routes_iter(all_route_lists, topic) ::

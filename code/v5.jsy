@@ -1,4 +1,4 @@
-import {mqtt_session_v5} from './session.jsy'
+import {mqtt_session_ctx} from './session.jsy'
 
 #IF PLAT_NODEJS
   import MQTTClient from './core_node.jsy'
@@ -7,5 +7,5 @@ import {mqtt_session_v5} from './session.jsy'
   import MQTTClient from './core_web.jsy'
 
 export default class MQTTClient_v5 extends MQTTClient ::
-MQTTClient_v5.prototype.mqtt_session = mqtt_session_v5
+MQTTClient_v5.prototype.mqtt_session = mqtt_session_ctx().v5
 

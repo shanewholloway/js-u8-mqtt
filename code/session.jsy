@@ -1,5 +1,5 @@
 import {
-  _bind_mqtt_suite,
+  _bind_mqtt_session_ctx,
 
   mqtt_decode_connack,
   mqtt_decode_publish,
@@ -12,51 +12,47 @@ import {
   mqtt_encode_connect,
   mqtt_encode_disconnect,
   mqtt_encode_publish,
+  mqtt_encode_puback,
+  mqtt_encode_pingxxx,
   mqtt_encode_subscribe,
   mqtt_encode_unsubscribe,
   mqtt_encode_auth,
 } from 'u8-mqtt-packet/esm/codec.mjs'
 
 
-const _mqtt_decode_all = [
-    mqtt_decode_connack,
-    mqtt_decode_publish,
-    mqtt_decode_puback,
-    mqtt_decode_pubxxx,
-    mqtt_decode_suback,
-    mqtt_decode_unsuback,
-    mqtt_decode_auth,
-  ]
+export function mqtt_session_ctx() ::
+  let {ctx} = mqtt_session_ctx
+  if undefined === ctx ::
+    const as_utf8 = u8 =>
+      new TextDecoder('utf-8').decode(u8)
 
-const _mqtt_encode_all = [
-    mqtt_encode_connect,
-    mqtt_encode_disconnect,
-    mqtt_encode_publish,
-    mqtt_encode_subscribe,
-    mqtt_encode_unsubscribe,
-    mqtt_encode_auth,
-  ]
+    const std_pkt_api = @{}
+      utf8(u8) :: return as_utf8 @ u8 || this.payload
+      json(u8) :: return JSON.parse @ as_utf8 @ u8 || this.payload
 
 
+    mqtt_session_ctx.ctx = ctx =
+      _bind_mqtt_session_ctx @
+        @[] // lst_decode_ops
+          mqtt_decode_connack,
+          mqtt_decode_publish,
+          mqtt_decode_puback,
+          mqtt_decode_pubxxx,
+          mqtt_decode_suback,
+          mqtt_decode_unsuback,
+          mqtt_decode_auth,
 
-const as_utf8 = u8 =>
-  new TextDecoder('utf-8').decode @ u8
+        @[] // lst_encode_ops
+          mqtt_encode_connect,
+          mqtt_encode_disconnect,
+          mqtt_encode_publish,
+          mqtt_encode_puback,
+          mqtt_encode_pingxxx,
+          mqtt_encode_subscribe,
+          mqtt_encode_unsubscribe,
+          mqtt_encode_auth,
 
-const std_pkt_api = @{}
-  utf8(u8) :: return as_utf8 @ u8 || this.payload
-  json(u8) :: return JSON.parse @ as_utf8 @ u8 || this.payload
+        std_pkt_api
 
-
-
-export const {
-
-    decode: mqtt_decode_session,
-    encode: mqtt_encode_session,
-    v4: mqtt_session_v4,
-    v5: mqtt_session_v5,
-
-  } = _bind_mqtt_suite(
-        _mqtt_decode_all,
-        _mqtt_encode_all,
-        std_pkt_api)
+  return ctx
 

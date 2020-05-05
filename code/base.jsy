@@ -15,6 +15,8 @@ export default class MQTTBaseClient ::
   connect(pkt) :: return this._send('connect', pkt, 'connack')
   disconnect(pkt) :: return this._send('disconnect', pkt)
 
+  ping() { return this._send('pingreq') }
+
   subscribe(pkt, ex) ::
     pkt = _as_topics(pkt, ex)
     return this._send('subscribe', pkt, pkt)
@@ -22,6 +24,7 @@ export default class MQTTBaseClient ::
     pkt = _as_topics(pkt, ex)
     return this._send('unsubscribe', pkt, pkt)
 
+  puback(pkt) :: return this._send('puback', pkt)
   publish(pkt) :: return _pub @ this, pkt.qos, pkt
   post(topic, payload) :: return _pub @ this, 0, {topic, payload}
   send(topic, payload) :: return _pub @ this, 1, {topic, payload}
