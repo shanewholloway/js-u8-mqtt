@@ -9,26 +9,16 @@ export default class MQTTNodeClient extends MQTTBaseClient ::
       : tcp_connect(1883)
     return this.with_stream(sock)
 
-  async with_stream(duplex_stream, passthrough) ::
+  async with_stream(duplex_stream) ::
     const on_mqtt_chunk = this._conn_.set @
       this.mqtt_session
       u8_pkt => duplex_stream.write(u8_pkt)
 
     duplex_stream.once @ 'end', this._conn_.reset
 
-    this._msg_loop = passthrough
-      ? _aiter_msg_loop(duplex_stream, on_mqtt_chunk)
-      : _async_msg_loop(duplex_stream, on_mqtt_chunk)
+    this._msg_loop = @!>
+      for await const chunk of duplex_stream ::
+        on_mqtt_chunk @ chunk
 
     return this
-
-
-async function _async_msg_loop(duplex_stream, on_mqtt_chunk) ::
-  for await const chunk of duplex_stream ::
-    on_mqtt_chunk @ chunk
-
-async function * _aiter_msg_loop(duplex_stream, on_mqtt_chunk) ::
-  for await const chunk of duplex_stream ::
-    on_mqtt_chunk @ chunk
-    yield chunk
 

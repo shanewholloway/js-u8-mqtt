@@ -63,11 +63,6 @@ export default class MQTTBaseClient ::
 
   /* async _send(type, pkt) -- provided by _conn_ and transport */
 
-  static with(mqtt_session) ::
-    this.prototype.mqtt_session = mqtt_session
-    return this
-
-
   _init_router(opt) ::
     const router = _mqtt_topic_router(this)
     this.add_route = router.add

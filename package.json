@@ -36,7 +36,7 @@
     "rollup-plugin-dgnotify": "^0.1.5",
     "rollup-plugin-jsy": "^1.7.1",
     "rollup-plugin-terser": "^5.3.0",
-    "u8-mqtt-packet": "file:../js-u8-mqtt-packet"
+    "u8-mqtt-packet": "^0.0.12"
   },
   "scripts": {
     "start": "qsrv -- *.html esm/",

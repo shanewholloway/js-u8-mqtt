@@ -855,9 +855,11 @@ function _mqtt_conn(client, [on_mqtt, pkt_future]) {
       client._send = _asy_send;}
 
   , ping(td) {
-      clearInterval(tid_ping);
-      tid_ping = setInterval(_ping, 1000 * td);
-      if (tid_ping.unref) {tid_ping.unref();} }
+      tid_ping = clearInterval(tid_ping);
+      if (td) {
+        tid_ping = setInterval(_ping, 1000 * td);
+        if (tid_ping.unref) {
+          tid_ping.unref();} } }
 
   , set(mqtt_session, send_u8_pkt) {
       const [mqtt_decode, mqtt_encode] =
@@ -1107,7 +1109,7 @@ class MQTTBaseClient {
   async connect(pkt={}) {
     if (! pkt.client_id) {
       pkt.client_id = this.new_client_id();}
-    if (! pkt.keep_alive) {
+    if (null == pkt.keep_alive) {
       pkt.keep_alive = 60;}
 
     const res = await this._send('connect', pkt, 'connack');
@@ -1149,11 +1151,6 @@ class MQTTBaseClient {
 
 
   /* async _send(type, pkt) -- provided by _conn_ and transport */
-
-  static with(mqtt_session) {
-    this.prototype.mqtt_session = mqtt_session;
-    return this}
-
 
   _init_router(opt) {
     const router = _mqtt_topic_router();
