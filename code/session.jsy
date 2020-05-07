@@ -18,10 +18,10 @@ import {
   mqtt_encode_subscribe,
   mqtt_encode_unsubscribe,
   mqtt_encode_auth,
-} from 'u8-mqtt-packet/esm/codec.mjs'
+} from 'u8-mqtt-packet'
 
 
-export function mqtt_session_ctx() ::
+export function mqtt_session_ctx(mqtt_level) ::
   let {ctx} = mqtt_session_ctx
   if undefined === ctx ::
     const as_utf8 = u8 =>
@@ -56,5 +56,5 @@ export function mqtt_session_ctx() ::
 
         std_pkt_api
 
-  return ctx
+  return ctx(mqtt_level)
 
