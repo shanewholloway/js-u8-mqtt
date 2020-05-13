@@ -27,8 +27,10 @@ export function _mqtt_conn(client, [on_mqtt, pkt_future]) ::
       if _asy_send === _send ::
         _send = await q0
 
+      // await connack response
+      const res = await _send(...args)
+
       client._send = _send
-      const res = _send(...args)
       q.notify(_send)
       return res
 
