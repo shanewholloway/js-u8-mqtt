@@ -4,9 +4,11 @@ import {_mqtt_dispatch} from './_dispatch.jsy'
 
 export default class MQTTBaseClient ::
   constructor(opt={}) ::
-    const {on_mqtt_type} = opt
+    const {on_mqtt_type, on_live} = opt
     if on_mqtt_type ::
       this.on_mqtt_type = on_mqtt_type
+    if on_live ::
+      this.on_live = on_live
 
     this._conn_ = _mqtt_conn @ this,
       this._init_dispatch(opt, this)

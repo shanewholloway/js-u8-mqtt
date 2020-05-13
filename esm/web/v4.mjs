@@ -806,21 +806,22 @@ function mqtt_session_ctx(mqtt_level) {
 }
 
 function _mqtt_conn(client, [on_mqtt, pkt_future]) {
-  const q0 = _asy_send_queue();
-  const q = _asy_send_queue();
-  const _asy_send = async (...args) => (await q)(...args);
-  let _send = _asy_send;
+  const q0 = _tiny_deferred_queue();
+  const q = _tiny_deferred_queue();
+
+  const _asy_send = async (...args) =>
+    (await q)(...args);
+  let _send = client._send = _asy_send;
 
   const _ping = () => client._send('pingreq');
   let tid_ping;
 
-  const self ={
+  return {
     is_live: (() =>_asy_send !== _send)
 
   , reset() {
       tid_ping = clearInterval(tid_ping);
-      client._send = _send = _asy_send;
-      return self}
+      client._send = _send = _asy_send;}
 
   , ping(td) {
       tid_ping = clearInterval(tid_ping);
@@ -834,7 +835,7 @@ function _mqtt_conn(client, [on_mqtt, pkt_future]) {
         _send = await q0;}
 
       client._send = _send;
-      const res = await _send(...args);
+      const res = _send(...args);
       q.notify(_send);
       return res}
 
@@ -842,12 +843,10 @@ function _mqtt_conn(client, [on_mqtt, pkt_future]) {
       const [mqtt_decode, mqtt_encode] =
         mqtt_session();
 
-
       const on_mqtt_chunk = u8_buf =>
         on_mqtt(
           mqtt_decode(u8_buf),
           {mqtt: client});
-
 
       _send = async (type, pkt, key) => {
         const res = undefined !== key
@@ -858,23 +857,25 @@ function _mqtt_conn(client, [on_mqtt, pkt_future]) {
 
         return res};
 
+
       q0.notify(_send);
 
       // call client.on_live in next promise microtask
-      Promise.resolve(client).then(_on_live);
+      Promise.resolve(client).then(_on_live_client);
 
-      return on_mqtt_chunk} };
-
-  return self.reset()}
+      return on_mqtt_chunk} } }
 
 
-function _asy_send_queue() {
+function _tiny_deferred_queue() {
   const q = []; // tiny resetting deferred queue
   q.then = y => { q.push(y); };
   q.notify = v => { for (const fn of q.splice(0,q.length)) fn(v); };
-  return q}
+  return q
+}
 
-function _on_live(client) { client.on_live(client); }
+function _on_live_client(client) {
+  client.on_live(client);
+}
 
 function _rxp_parse (str, loose) {
 	if (str instanceof RegExp) return { keys:false, pattern:str };
@@ -1069,9 +1070,11 @@ function _mqtt_dispatch(opt, target) {
 
 class MQTTBaseClient {
   constructor(opt={}) {
-    const {on_mqtt_type} = opt;
+    const {on_mqtt_type, on_live} = opt;
     if (on_mqtt_type) {
       this.on_mqtt_type = on_mqtt_type;}
+    if (on_live) {
+      this.on_live = on_live;}
 
     this._conn_ = _mqtt_conn(this,
       this._init_dispatch(opt, this)); }
