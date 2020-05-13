@@ -4,7 +4,12 @@ import MQTTBaseClient from './base.jsy'
   import {connect as tcp_connect} from 'net'
 
 
-export default class MQTTClient extends MQTTBaseClient ::
+export default MQTTCoreClient
+export class MQTTCoreClient extends MQTTBaseClient ::
+  static _with_session(mqtt_session) ::
+    this.prototype._mqtt_session = mqtt_session
+
+
   #IF PLAT_NODEJS
     with_tcp(...args) ::
       const sock = args.length
@@ -16,7 +21,7 @@ export default class MQTTClient extends MQTTBaseClient ::
   #IF HAS_STREAM
     async with_stream(duplex_stream) ::
       const on_mqtt_chunk = this._conn_.set @
-        this.mqtt_session
+        this._mqtt_session
         u8_pkt => duplex_stream.write(u8_pkt)
 
       duplex_stream.once @ 'end', this._conn_.reset
@@ -26,6 +31,7 @@ export default class MQTTClient extends MQTTBaseClient ::
           on_mqtt_chunk @ chunk
 
       return this
+
 
   async with_websock(websock) ::
     if null == websock ::
@@ -46,7 +52,7 @@ export default class MQTTClient extends MQTTBaseClient ::
 
     const {_conn_} = this
     const on_mqtt_chunk = _conn_.set @
-      this.mqtt_session
+      this._mqtt_session
       u8_pkt => websock.send @ u8_pkt
 
     websock.addEventListener @ 'close',
