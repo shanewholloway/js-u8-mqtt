@@ -21,20 +21,21 @@ import {
 } from 'u8-mqtt-packet'
 
 
-export function mqtt_session_ctx(mqtt_level) ::
+export default mqtt_session_ctx
+export function mqtt_session_ctx(mqtt_level) {
   let {ctx} = mqtt_session_ctx
-  if undefined === ctx ::
+  if (undefined === ctx ) {
     const as_utf8 = u8 =>
       new TextDecoder('utf-8').decode(u8)
 
-    const std_pkt_api = @{}
-      utf8(u8) :: return as_utf8 @ u8 || this.payload
-      json(u8) :: return JSON.parse @ as_utf8 @ u8 || this.payload
-
+    const std_pkt_api = {
+      utf8(u8) { return as_utf8( u8 || this.payload ) },
+      json(u8) { return JSON.parse( as_utf8( u8 || this.payload )) },
+    }
 
     mqtt_session_ctx.ctx = ctx =
-      _bind_mqtt_session_ctx @
-        @[] // lst_decode_ops
+      _bind_mqtt_session_ctx(
+        [ // lst_decode_ops
           mqtt_decode_connack,
           mqtt_decode_publish,
           mqtt_decode_puback,
@@ -42,9 +43,9 @@ export function mqtt_session_ctx(mqtt_level) ::
           mqtt_decode_pingxxx,
           mqtt_decode_suback,
           mqtt_decode_unsuback,
-          mqtt_decode_auth,
+          mqtt_decode_auth, ],
 
-        @[] // lst_encode_ops
+        [ // lst_encode_ops
           mqtt_encode_connect,
           mqtt_encode_disconnect,
           mqtt_encode_publish,
@@ -52,9 +53,11 @@ export function mqtt_session_ctx(mqtt_level) ::
           mqtt_encode_pingxxx,
           mqtt_encode_subscribe,
           mqtt_encode_unsubscribe,
-          mqtt_encode_auth,
+          mqtt_encode_auth, ],
 
-        std_pkt_api
+        std_pkt_api )
+  }
 
   return ctx(mqtt_level)
+}
 

@@ -49,8 +49,8 @@ export const _mqtt_cmdid_dispatch = @{}
       by_id    // 0x9 suback
       by_evt   // 0xa unsubscribe
       by_id    // 0xb unsuback
-      by_evt   // 0xc pingreq
-      by_evt   // 0xd pingresp
+      by_type  // 0xc pingreq
+      by_type  // 0xd pingresp
       by_evt   // 0xe disconnect
       by_type  // 0xf auth
 

@@ -3,7 +3,7 @@
 
 import _rxp_parse from 'regexparam/dist/regexparam.mjs'
 
-function _msg_ignore(pkt, params, ctx) :: ctx.done = true
+function _ignore(pkt, params, ctx) :: ctx.done = true
 
 export function _mqtt_topic_router() ::
   const pri_lsts=[[],[]]
@@ -15,7 +15,7 @@ export function _mqtt_topic_router() ::
       let fn = args.pop()
       if 'function' !== typeof fn ::
         if false === fn ::
-          fn = _msg_ignore
+          fn = _ignore
         else throw new TypeError()
 
       const priority = true === args[0] && args.shift()

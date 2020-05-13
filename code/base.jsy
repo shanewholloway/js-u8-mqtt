@@ -1,9 +1,13 @@
 import {_mqtt_conn} from './_conn.jsy'
 import {_mqtt_topic_router} from './_router.jsy'
-import {_mqtt_dispatch, mqtt_pkt_proto} from './_dispatch.jsy'
+import {_mqtt_dispatch} from './_dispatch.jsy'
 
 export default class MQTTBaseClient ::
-  constructor(opt) ::
+  constructor(opt={}) ::
+    const {on_mqtt_type} = opt
+    if on_mqtt_type ::
+      this.on_mqtt_type = on_mqtt_type
+
     this._conn_ = _mqtt_conn @ this,
       this._init_dispatch(opt, this)
 
@@ -11,21 +15,33 @@ export default class MQTTBaseClient ::
 
   // Core API:
 
-  new_client_id(pre='u8-mqtt--') ::
-    return pre + Math.random().toString(36).slice(2)
+  new_client_id(pre=[]) ::
+    return `${pre[0]||'u8-mqtt--'}${Math.random().toString(36).slice(2)}${pre[1]||''}`
+
+  client_id(pre) ::
+    let cid = this._client_id
+    if undefined === cid ::
+      this._client_id = cid =
+        this.new_client_id(pre)
+    return cid
 
   auth(pkt={}) ::
     return this._send('auth', pkt, 'auth')
 
   async connect(pkt={}) ::
-    if ! pkt.client_id ::
-      pkt.client_id = this.new_client_id()
+    const {client_id: cid} = pkt
+    if ! cid ::
+      pkt.client_id = this.client_id()
+    else if Array.isArray(cid) ::
+      pkt.client_id = this.client_id(cid)
+
     if null == pkt.keep_alive ::
       pkt.keep_alive = 60
 
-    const res = await this._send('connect', pkt, 'connack')
-    // TODO: merge with server's keep_alive frequency
+    const res = await this._conn_
+      .send_connect @ 'connect', pkt, 'connack'
 
+    // TODO: merge with server's keep_alive frequency
     this._conn_.ping(pkt.keep_alive)
     return res
 
@@ -63,6 +79,8 @@ export default class MQTTBaseClient ::
 
   /* async _send(type, pkt) -- provided by _conn_ and transport */
 
+  on_live(client) ::
+
   _init_router(opt) ::
     const router = _mqtt_topic_router(this)
     this.add_route = router.add
@@ -72,7 +90,7 @@ export default class MQTTBaseClient ::
     const router = this._init_router(opt, this)
 
     const tgt = @{}
-      __proto__: this.mqtt_pkt_proto
+      __proto__: this.on_mqtt_type || {}
       mqtt_publish: router.invoke
 
     return _mqtt_dispatch @ this, tgt
@@ -81,11 +99,25 @@ export default class MQTTBaseClient ::
 ::
   const p = MQTTBaseClient.prototype
   Object.assign @ p, @{}
-    mqtt_pkt_proto
     pub: p.publish
     sub_route: p.subscribe_route
     sub: p.subscribe
     unsub: p.unsubscribe
+
+  /*
+    p.on_mqtt_type = {
+      mqtt_auth(pkt, ctx) ::
+      mqtt_connect(pkt, ctx) ::
+      mqtt_connack(pkt, ctx) ::
+      mqtt_disconnect(pkt, ctx) ::
+
+      mqtt_subscribe(pkt, ctx) ::
+      mqtt_unsubscribe(pkt, ctx) ::
+
+      mqtt_pingreq(pkt, ctx) ::
+      mqtt_pingresp(pkt, ctx) ::
+    }
+  */
 
 
 function _pub(self, qos, pkt) ::

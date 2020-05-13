@@ -11,7 +11,12 @@ const _cfg_ = {
 
 const cfg_nodejs = { ..._cfg_,
   plugins: [
-    rpi_jsy({defines: {PLAT_NODEJS: true}}),
+    rpi_jsy({defines: {PLAT_NODEJS: true, HAS_STREAM: true}}),
+    ... _cfg_.plugins ]}
+
+const cfg_deno = { ..._cfg_,
+  plugins: [
+    rpi_jsy({defines: {PLAT_DENO: true}}),
     ... _cfg_.plugins ]}
 
 const cfg_web = { ..._cfg_,
@@ -35,12 +40,16 @@ add_jsy('v5')
 
 
 function add_jsy(src_name, opt={}) {
-  const input = `code/${src_name}${opt.ext || '.jsy'}`
+  const input = `code/${src_name}.mjs`
 
   if (cfg_nodejs)
     configs.push({ ... cfg_nodejs, input, output: [
       { ... _out_, file: `cjs/${src_name}.cjs`, format: 'cjs', exports:opt.exports || 'named' },
       { ... _out_, file: `esm/node/${src_name}.mjs`, format: 'es' } ]})
+
+  if (cfg_deno)
+    configs.push({ ... cfg_deno, input,
+      output: { ... _out_, file: `esm/deno/${src_name}.mjs`, format: 'es' }})
 
   if (cfg_web)
     configs.push({ ... cfg_web, input,

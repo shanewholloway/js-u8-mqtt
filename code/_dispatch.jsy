@@ -1,19 +1,5 @@
 import {_mqtt_cmdid_dispatch} from './_cmdid_dispatch.jsy'
 
-export const mqtt_pkt_proto = @{}
-  mqtt_auth(pkt) ::
-  mqtt_connect(pkt) ::
-  mqtt_connack(pkt) ::
-  mqtt_disconnect(pkt) ::
-
-  mqtt_publish(pkt) ::
-  mqtt_subscribe(pkt) ::
-  mqtt_unsubscribe(pkt) ::
-
-  mqtt_pingreq(pkt) ::
-  mqtt_pingresp(pkt) ::
-
-
 export function _mqtt_dispatch(opt, target) ::
   const _disp_ = _mqtt_cmdid_dispatch.create(target)
   const { cmdids } = _disp_
