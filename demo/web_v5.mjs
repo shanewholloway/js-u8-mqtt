@@ -12,7 +12,7 @@ async function on_live(my_mqtt) {
   try {
     await somewhere_in_your_code(my_mqtt)
 
-    my_mqtt.send(
+    await my_mqtt.send(
       'u8-mqtt-demo/another/pineapple/mango',
       'Web-side v5 Fruity fun')
 
