@@ -11,7 +11,7 @@ If the `opt.on_mqtt_type` object is provided, `mqtt._init_dispatch(opt)` uses it
 
 If the `opt.on_live(mqtt)` closure is provided, `mqtt.with_live(opt.on_live)` is called.
 
-Packets are decoded via the internal `mqtt._conn_` and the bound `mqtt._mqtt_session` objects. Please read [`_conn.jsy`][../code/_conn.jsy] for details.
+Packets are decoded via the internal `mqtt._conn_` and the bound `mqtt._mqtt_session` objects. Please read [`_conn.jsy`](../code/_conn.jsy) for details.
 
 
 ### Transport
@@ -37,11 +37,11 @@ Packets are decoded via the internal `mqtt._conn_` and the bound `mqtt._mqtt_ses
 
 Route topic handlers like [expressjs]() routes.
 
-  * Static (/foo, /foo/bar)
-  * Parameter (/:title, /books/:title, /books/:genre/:title)
-  * Parameter w/ Suffix (/movies/:title.mp4, /movies/:title.(mp4|mov))
-  * Optional Parameters (/:title?, /books/:title?, /books/:genre/:title?)
-  * Wildcards (*, /books/*, /books/:genre/*)
+  * Static (`/foo`, `/foo/bar`)
+  * Parameter (`/:title`, `/books/:title`, `/books/:genre/:title`)
+  * Parameter w/ Suffix (`/movies/:title.mp4`, `/movies/:title.(mp4|mov)`)
+  * Optional Parameters (`/:title?`, `/books/:title?`, `/books/:genre/:title?`)
+  * Wildcards (`*`, `/books/*`, `/books/:genre/*`)
 
 See [regexparam][] for routing rule details for `topic_route`.
 
@@ -69,11 +69,56 @@ See [regexparam][] for routing rule details for `topic_route`.
 
     Automatically sends `puback` response packet when `pkt.qos === 1` if no exceptions are thrown.
 
-  See [`_router.jsy`][../code/_router.jsy] for details.
+  See [`_router.jsy`](../code/_router.jsy) for details.
   See `mqtt._init_router` and `mqtt._init_dispatch` for client integration.
 
 
-##### Handshaking Packets
+#### Subscription Packets
+
+* `mqtt.subscribe(pkt)` -- Encode and send an MQTT subscribe packet.
+  * `mqtt.sub` -- alias for `mqtt.subscribe`
+  * `mqtt.subscribe(topic, ex)` -- alias for `mqtt.subscribe({topics: [topic], ...ex})`
+    * `mqtt.sub(topic, ex)` -- alias for `mqtt.subscribe({topics: [topic], ...ex})`
+  * `mqtt.subscribe(topic_list, ex)` -- alias for `mqtt.subscribe({topics: [... topic_list], ...ex})`
+    * `mqtt.sub(topic_list, ex)` -- alias for `mqtt.subscribe({topics: [... topic_list], ...ex})`
+
+  See [`u8-mqtt-packet/docs/mqtt_codec_subscribe.md`](https://github.com/shanewholloway/js-u8-mqtt-packet/blob/master/docs/mqtt_codec_subscribe.md) for MQTT packet encoding details
+
+* `mqtt.unsubscribe(pkt)` -- Encode and send an MQTT unsubscribe packet.
+  * `mqtt.unsub` -- alias for `mqtt.unsubscribe`
+  * `mqtt.unsubscribe(topic, ex)` -- alias for `mqtt.unsubscribe({topics: [topic], ...ex})`
+    * `mqtt.unsub(topic, ex)` -- alias for `mqtt.unsubscribe({topics: [topic], ...ex})`
+  * `mqtt.unsubscribe(topic_list, ex)` -- alias for `mqtt.unsubscribe({topics: [... topic_list], ...ex})`
+    * `mqtt.unsub(topic_list, ex)` -- alias for `mqtt.unsubscribe({topics: [... topic_list], ...ex})`
+
+
+  See [`u8-mqtt-packet/docs/mqtt_codec_unsubscribe.md`](https://github.com/shanewholloway/js-u8-mqtt-packet/blob/master/docs/mqtt_codec_unsubscribe.md) for MQTT packet encoding details
+
+* `mqtt.subscribe_topic(topic, [qos=0,] handler)` -- alias for `mqtt.on_topic(topic, true, handler)` and `mqtt.subscribe([[topic, qos]])`
+  * `mqtt.sub_topic` -- alias for `mqtt.subscribe_topic`
+
+
+#### Publish Packets
+
+* `mqtt.publish(pkt)` -- Encode and send an MQTT publish packet. Handles `puback` for `QOS:1`.
+  * `mqtt.pub(pkt)` -- alias for `mqtt.publish(pkt)`
+
+  See [`u8-mqtt-packet/docs/mqtt_codec_publish.md`](https://github.com/shanewholloway/js-u8-mqtt-packet/blob/master/docs/mqtt_codec_publish.md) for MQTT packet encoding details
+
+* `mqtt.post(topic, payload)` -- alias for `mqtt.publish({topic, qos: 0, payload})`
+  * `mqtt.post(topic)` -- closure of `payload => mqtt.post(topic, payload)`
+
+* `mqtt.send(topic, payload)` -- alias for `mqtt.publish({topic, qos: 1, payload})`
+  * `mqtt.send(topic)` -- closure of `payload => mqtt.send(topic, payload)`
+
+* `mqtt.json_post(topic, msg)` -- alias for `mqtt.publish({topic, qos: 0, payload: JSON.stringify(msg))`
+  * `mqtt.json_post(topic)` -- closure of `msg => mqtt.json_post(topic, msg)`
+
+* `mqtt.json_send(topic, msg)` -- alias for `mqtt.publish({topic, qos: 1, payload: JSON.stringify(msg))`
+  * `mqtt.json_send(topic)` -- closure of `msg => mqtt.json_send(topic, msg)`
+
+
+#### Handshaking Packets
 
 See [u8-mqtt-packet][] for MQTT packet encoding details
 
@@ -99,51 +144,6 @@ See [u8-mqtt-packet][] for MQTT packet encoding details
   Note that `mqtt.connect` automatically pings the MQTT server based on `keep_alive` setting.
 
   See [`u8-mqtt-packet/docs/mqtt_codec_pingreq_pingresp.md`](https://github.com/shanewholloway/js-u8-mqtt-packet/blob/master/docs/mqtt_codec_pingreq_pingresp.md) for MQTT packet encoding details
-
-
-##### Subscription Packets
-
-* `mqtt.subscribe(pkt)` -- Encode and send an MQTT subscribe packet.
-  * `mqtt.sub` -- alias for `mqtt.subscribe`
-  * `mqtt.subscribe(topic, ex)` -- alias for `mqtt.subscribe({topics: [topic], ...ex})`
-    * `mqtt.sub(topic, ex)` -- alias for `mqtt.subscribe({topics: [topic], ...ex})`
-  * `mqtt.subscribe(topic_list, ex)` -- alias for `mqtt.subscribe({topics: [... topic_list], ...ex})`
-    * `mqtt.sub(topic_list, ex)` -- alias for `mqtt.subscribe({topics: [... topic_list], ...ex})`
-
-  See [`u8-mqtt-packet/docs/mqtt_codec_subscribe.md`](https://github.com/shanewholloway/js-u8-mqtt-packet/blob/master/docs/mqtt_codec_subscribe.md) for MQTT packet encoding details
-
-* `mqtt.unsubscribe(pkt)` -- Encode and send an MQTT unsubscribe packet.
-  * `mqtt.unsub` -- alias for `mqtt.unsubscribe`
-  * `mqtt.unsubscribe(topic, ex)` -- alias for `mqtt.unsubscribe({topics: [topic], ...ex})`
-    * `mqtt.unsub(topic, ex)` -- alias for `mqtt.unsubscribe({topics: [topic], ...ex})`
-  * `mqtt.unsubscribe(topic_list, ex)` -- alias for `mqtt.unsubscribe({topics: [... topic_list], ...ex})`
-    * `mqtt.unsub(topic_list, ex)` -- alias for `mqtt.unsubscribe({topics: [... topic_list], ...ex})`
-
-
-  See [`u8-mqtt-packet/docs/mqtt_codec_unsubscribe.md`](https://github.com/shanewholloway/js-u8-mqtt-packet/blob/master/docs/mqtt_codec_unsubscribe.md) for MQTT packet encoding details
-
-* `mqtt.subscribe_topic(topic, [qos=0,] handler)` -- alias for `mqtt.on_topic(topic, true, handler)` and `mqtt.subscribe([[topic, qos]])`
-  * `mqtt.sub_topic` -- alias for `mqtt.subscribe_topic`
-
-
-##### Publish Packets
-
-* `mqtt.publish(pkt)` -- Encode and send an MQTT publish packet. Handles `puback` for `QOS:1`.
-  * `mqtt.pub(pkt)` -- alias for `mqtt.publish(pkt)`
-
-  See [`u8-mqtt-packet/docs/mqtt_codec_publish.md`](https://github.com/shanewholloway/js-u8-mqtt-packet/blob/master/docs/mqtt_codec_publish.md) for MQTT packet encoding details
-
-* `mqtt.post(topic, payload)` -- alias for `mqtt.publish({topic, qos: 0, payload})`
-  * `mqtt.post(topic)` -- closure of `payload => mqtt.post(topic, payload)`
-
-* `mqtt.send(topic, payload)` -- alias for `mqtt.publish({topic, qos: 1, payload})`
-  * `mqtt.send(topic)` -- closure of `payload => mqtt.send(topic, payload)`
-
-* `mqtt.json_post(topic, msg)` -- alias for `mqtt.publish({topic, qos: 0, payload: JSON.stringify(msg))`
-  * `mqtt.json_post(topic)` -- closure of `msg => mqtt.json_post(topic, msg)`
-
-* `mqtt.json_send(topic, msg)` -- alias for `mqtt.publish({topic, qos: 1, payload: JSON.stringify(msg))`
-  * `mqtt.json_send(topic)` -- closure of `msg => mqtt.json_send(topic, msg)`
 
 
 ### Utilities
@@ -180,11 +180,11 @@ opt.on_mqtt_type = {
 ### Internal/Extension API
 
 * `MQTTClient._with_session(mqtt_session)` -- static method that assigns prototype-shared `mqtt._mqtt_session`. See [`v4.mjs`](../code/v4.mjs) and [`v5.mjs`](../code/v5.mjs)
-  * `mqtt._mqtt_session` -- See [`session.mjs`](code/session.mjs)
+  * `mqtt._mqtt_session` -- See [`session.mjs`](../code/session.mjs)
 
-* `mqtt._send(type, pkt, key)` -- Encode and send an MQTT packet of `type`. See [`_conn.jsy`][../code/_conn.jsy] for details.
+* `mqtt._send(type, pkt, key)` -- Encode and send an MQTT packet of `type`. See [`_conn.jsy`](../code/_conn.jsy) for details.
 
-* `mqtt._init_router(opt)` -- Creates an express-like topic router. See [`_router.jsy`][../code/_router.jsy] for details.
+* `mqtt._init_router(opt)` -- Creates an express-like topic router. See [`_router.jsy`](../code/_router.jsy) for details.
 
-* `mqtt._init_dispatch(opt)` -- Connects `opt.on_mqtt_type` with the publish packet topic-router. See [`_dispatch.jsy`][../code/_dispatch.jsy] for details.
+* `mqtt._init_dispatch(opt)` -- Connects `opt.on_mqtt_type` with the publish packet topic-router. See [`_dispatch.jsy`](../code/_dispatch.jsy) for details.
 

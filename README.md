@@ -4,13 +4,13 @@ A JavaScript MQTT client using async/await support QOS-0 and QOS-1.
 Zero external dependencies. [Tree-shaking friendly](https://rollupjs.org/guide/en/).
 Suited for use in modern ES6 environments: the Browser, [NodeJS](https://nodejs.org/en/), and [Deno](https://deno.land/).
 
-Use [ExpressJS][]-like router to handle publish messages for matching topics.
+Use ExpressJS-like router to handle publish messages for matching topics.
 
-  * Static (/foo, /foo/bar)
-  * Parameter (/:title, /books/:title, /books/:genre/:title)
-  * Parameter w/ Suffix (/movies/:title.mp4, /movies/:title.(mp4|mov))
-  * Optional Parameters (/:title?, /books/:title?, /books/:genre/:title?)
-  * Wildcards (*, /books/*, /books/:genre/*)
+  * Static (`/foo`, `/foo/bar`)
+  * Parameter (`/:title`, `/books/:title`, `/books/:genre/:title`)
+  * Parameter w/ Suffix (`/movies/:title.mp4`, `/movies/:title.(mp4|mov)`)
+  * Optional Parameters (`/:title?`, `/books/:title?`, `/books/:genre/:title?`)
+  * Wildcards (`*`, `/books/*`, `/books/:genre/*`)
 
  (Thanks to @lukeed and the excellent [regexparam][] library!)
 
