@@ -11,6 +11,8 @@ If the `opt.on_mqtt_type` object is provided, `mqtt._init_dispatch(opt)` uses it
 
 If the `opt.on_live(mqtt)` closure is provided, `mqtt.with_live(opt.on_live)` is called.
 
+If the `opt.on_reconnect(mqtt)` closure is provided, `mqtt.with_reconnect(opt.on_reconnect)` is called.
+
 Packets are decoded via the internal `mqtt._conn_` and the bound `mqtt._mqtt_session` objects. Please read [`_conn.jsy`](../code/_conn.jsy) for details.
 
 
@@ -25,6 +27,10 @@ Packets are decoded via the internal `mqtt._conn_` and the bound `mqtt._mqtt_ses
 * `mqtt.on_live(mqtt)` -- Called upon transport connection. Override or install via constructor.
 
 * `mqtt.with_live(on_live)` -- Assigns `mqtt.on_live` to the provide closure. Returns `this`.
+
+* `mqtt.on_reconnect(mqtt)` -- Called upon disconnect or transport interruption. Override or install via constructor.
+
+* `mqtt.with_reconnect(on_reconnect)` -- Assigns `mqtt.on_reconnect` to the provide closure. Invokes `on_reconnect` if `_conn_.is_set` is `false`. Returns `this`.
 
 
 ### Packets

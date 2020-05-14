@@ -9,6 +9,29 @@ export class MQTTCoreClient extends MQTTBaseClient ::
   static _with_session(mqtt_session) ::
     this.prototype._mqtt_session = mqtt_session
 
+  constructor(opt={}) ::
+    super(opt)
+    this.with_live(opt.on_live)
+    this.with_reconnnect(opt.on_reconnect)
+
+
+  // on_live(client) ::
+  with_live(on_live) ::
+    if on_live ::
+      this.on_live = on_live
+
+    return this
+
+  // on_reconnect(client) ::
+  with_reconnnect(on_reconnnect) ::
+    if on_reconnnect ::
+      this.on_reconnnect = on_reconnnect
+
+      if ! this._conn_.is_set ::
+        on_reconnnect(this)
+
+    return this
+
 
   #IF PLAT_NODEJS
     with_tcp(...args) ::
@@ -27,8 +50,10 @@ export class MQTTCoreClient extends MQTTBaseClient ::
       duplex_stream.once @ 'end', this._conn_.reset
 
       this._msg_loop = @!>
-        for await const chunk of duplex_stream ::
-          on_mqtt_chunk @ chunk
+        for await (const chunk of duplex_stream)
+          on_mqtt_chunk(chunk)
+
+        this._conn_.reset()
 
       return this
 

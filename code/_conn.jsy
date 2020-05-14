@@ -7,14 +7,20 @@ export function _mqtt_conn(client, [on_mqtt, pkt_future]) ::
   let _send = client._send = _asy_send
 
   const _ping = () => client._send('pingreq')
-  let tid_ping
+  let tid_ping, _is_set = false
 
   return @{}
     is_live: @=> _asy_send !== _send
+    is_set: @=> _is_set
 
     reset() ::
       tid_ping = clearInterval(tid_ping)
       client._send = _send = _asy_send
+      _is_set = false
+
+      // call client.on_reconnect in next promise microtask
+      Promise.resolve(client)
+        .then(client.on_reconnect)
 
     ping(td) ::
       tid_ping = clearInterval(tid_ping)
@@ -35,6 +41,8 @@ export function _mqtt_conn(client, [on_mqtt, pkt_future]) ::
       return res
 
     set(mqtt_session, send_u8_pkt) ::
+      _is_set = true
+
       const [mqtt_decode, mqtt_encode] =
         mqtt_session()
 
@@ -56,7 +64,8 @@ export function _mqtt_conn(client, [on_mqtt, pkt_future]) ::
       q0.notify(_send)
 
       // call client.on_live in next promise microtask
-      Promise.resolve(client).then(_on_live_client)
+      Promise.resolve(client)
+        .then(client.on_live)
 
       return on_mqtt_chunk
 
@@ -66,8 +75,4 @@ function _tiny_deferred_queue() {
   q.then = y => { q.push(y) }
   q.notify = v => { for (const fn of q.splice(0,q.length)) fn(v) }
   return q
-}
-
-function _on_live_client(client) {
-  client.on_live(client)
 }

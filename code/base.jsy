@@ -5,12 +5,8 @@ import {_mqtt_dispatch} from './_dispatch.jsy'
 export default MQTTBaseClient
 export class MQTTBaseClient ::
   constructor(opt={}) ::
-    const {on_live} = opt
-    if (on_live) this.with_live(on_live)
-
     this._conn_ = _mqtt_conn @ this,
       this._init_dispatch(opt, this)
-
 
   // Handshaking Packets
 
@@ -97,13 +93,6 @@ export class MQTTBaseClient ::
         cid = this.new_client_id(parts)
         sessionStorage.setItem(key, cid)
       return cid
-
-
-  with_live(on_live) ::
-    this.on_live = on_live
-    return this
-
-  on_live(client) ::
 
 
   // Internal API
