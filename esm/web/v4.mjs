@@ -814,14 +814,20 @@ function _mqtt_conn(client, [on_mqtt, pkt_future]) {
   let _send = client._send = _asy_send;
 
   const _ping = () => client._send('pingreq');
-  let tid_ping;
+  let tid_ping, _is_set = false;
 
   return {
     is_live: (() =>_asy_send !== _send)
+  , is_set: (() =>_is_set)
 
   , reset() {
       tid_ping = clearInterval(tid_ping);
-      client._send = _send = _asy_send;}
+      client._send = _send = _asy_send;
+      _is_set = false;
+
+      // call client.on_reconnect in next promise microtask
+      Promise.resolve(client)
+        .then(client.on_reconnect);}
 
   , ping(td) {
       tid_ping = clearInterval(tid_ping);
@@ -842,6 +848,8 @@ function _mqtt_conn(client, [on_mqtt, pkt_future]) {
       return res}
 
   , set(mqtt_session, send_u8_pkt) {
+      _is_set = true;
+
       const [mqtt_decode, mqtt_encode] =
         mqtt_session();
 
@@ -863,7 +871,8 @@ function _mqtt_conn(client, [on_mqtt, pkt_future]) {
       q0.notify(_send);
 
       // call client.on_live in next promise microtask
-      Promise.resolve(client).then(_on_live_client);
+      Promise.resolve(client)
+        .then(client.on_live);
 
       return on_mqtt_chunk} } }
 
@@ -873,10 +882,6 @@ function _tiny_deferred_queue() {
   q.then = y => { q.push(y); };
   q.notify = v => { for (const fn of q.splice(0,q.length)) fn(v); };
   return q
-}
-
-function _on_live_client(client) {
-  client.on_live(client);
 }
 
 function _rxp_parse (str, loose) {
@@ -986,25 +991,26 @@ const _mqtt_cmdid_dispatch ={
 , bind_pkt_future(_pkt_id=100) {
     const {hashbelt} = this;
 
-    let _hb_key;
-    const _by_key = resolve =>
-      hashbelt[0].set(_hb_key, resolve);
+    let _tmp_; // use _tmp_ to reuse _by_key closure
+    const _by_key = answer_monad =>
+      hashbelt[0].set(_tmp_, answer_monad);
 
     return (( pkt_or_key ) => {
       if ('string' === typeof pkt_or_key) {
-        _hb_key = pkt_or_key;}
+        _tmp_ = pkt_or_key;}
       else {
         _pkt_id = (_pkt_id + 1) & 0xffff;
-        _hb_key = pkt_or_key.pkt_id = _pkt_id;}
+        _tmp_ = pkt_or_key.pkt_id = _pkt_id;}
 
       return new Promise(_by_key)}) }
 
 , answer(key, pkt) {
     for (const map of this.hashbelt) {
-      const resolve = map.get(key);
-      if (undefined !== resolve) {
+      const answer_monad = map.get(key);
+      if (undefined !== answer_monad) {
         map.delete(key);
-        resolve([pkt]);
+
+        answer_monad([pkt, /*err*/]); // option/maybe monad
         return true} }
     return false}
 
@@ -1012,8 +1018,8 @@ const _mqtt_cmdid_dispatch ={
     const {hashbelt} = this;
     hashbelt.unshift(new Map());
     for (const old of hashbelt.splice(n || 5)) {
-      for (const resolve of old.values()) {
-        resolve([undefined, 'expired']); } } }
+      for (const answer_monad of old.values()) {
+        answer_monad([/*pkt*/, 'expired']); } } }// option/maybe monad
 
 , cmdids: ((() => {
     return [
@@ -1072,12 +1078,8 @@ function _mqtt_dispatch(opt, target) {
 
 class MQTTBaseClient {
   constructor(opt={}) {
-    const {on_live} = opt;
-    if (on_live) this.with_live(on_live);
-
     this._conn_ = _mqtt_conn(this,
       this._init_dispatch(opt, this)); }
-
 
   // Handshaking Packets
 
@@ -1129,11 +1131,11 @@ class MQTTBaseClient {
 
 
   // alias: pub
-  publish(pkt) {return _pub(this, pkt.qos, pkt)}
-  post(topic, payload) {return _pub(this, 0, {topic, payload})}
-  send(topic, payload) {return _pub(this, 1, {topic, payload})}
-  json_post(topic, msg) {return _pub(this, 0, {topic, msg, arg:'msg'})}
-  json_send(topic, msg) {return _pub(this, 1, {topic, msg, arg:'msg'})}
+  publish(pkt) {return _pub(this, pkt)}
+  post(topic, payload) {return _pub(this, {qos:0, topic, payload})}
+  send(topic, payload) {return _pub(this, {qos:1, topic, payload})}
+  json_post(topic, msg) {return _pub(this, {qos:0, topic, msg, arg:'msg'})}
+  json_send(topic, msg) {return _pub(this, {qos:1, topic, msg, arg:'msg'})}
 
 
 
@@ -1164,13 +1166,6 @@ class MQTTBaseClient {
       cid = this.new_client_id(parts);
       sessionStorage.setItem(key, cid);}
     return cid}
-
-
-  with_live(on_live) {
-    this.on_live = on_live;
-    return this}
-
-  on_live(client) {}
 
 
   // Internal API
@@ -1216,17 +1211,17 @@ class MQTTBaseClient {
   */}
 
 
-function _pub(self, qos, pkt) {
-  let key, {msg, payload} = pkt;
+function _pub(self, pkt) {
+  let key, {qos, msg, payload} = pkt;
   if (undefined === payload) {
     if (undefined === msg) {
       const arg = pkt.arg || 'payload';
-      return v => _pub(self, qos, {...pkt, [arg]: v}) }
+      return v => _pub(self, {...pkt, [arg]: v}) }
 
     pkt.payload = JSON.stringify(msg);}
 
-  if (qos > 0) {key = pkt;}
-  return self._send('publish', pkt, key) }
+  if (1 === qos) key = pkt;
+  return self._send('publish', pkt, key)}
 
 function _as_topics(pkt, ex) {
   if ('string' === typeof pkt) {
@@ -1239,6 +1234,29 @@ class MQTTCoreClient extends MQTTBaseClient {
   static _with_session(mqtt_session) {
     this.prototype._mqtt_session = mqtt_session;}
 
+  constructor(opt={}) {
+    super(opt);
+    this.with_live(opt.on_live);
+    this.with_reconnnect(opt.on_reconnect);}
+
+
+  // on_live(client) ::
+  with_live(on_live) {
+    if (on_live) {
+      this.on_live = on_live;}
+
+    return this}
+
+  // on_reconnect(client) ::
+  with_reconnnect(on_reconnnect) {
+    if (on_reconnnect) {
+      this.on_reconnnect = on_reconnnect;
+
+      if (! this._conn_.is_set) {
+        on_reconnnect(this);} }
+
+    return this}
+
 
   
 
@@ -1249,6 +1267,8 @@ class MQTTCoreClient extends MQTTBaseClient {
 
 
   
+
+
 
 
 
