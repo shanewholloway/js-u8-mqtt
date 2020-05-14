@@ -11,20 +11,20 @@ export function _mqtt_topic_router() ::
 
   return @{} find,
 
-    add(...args) ::
+    add(topic_route, ...args) ::
       let fn = args.pop()
+      const priority = args.pop()
+
       if 'function' !== typeof fn ::
         if false === fn ::
           fn = _ignore
         else throw new TypeError()
 
-      const priority = true === args[0] && args.shift()
-
       let rte = _rxp_parse @
-        args.shift()
-          .replace(/[+#]$/, '*')
+        topic_route.replace(/[+#]$/, '*')
+
       rte.tgt = fn
-      pri_lsts[priority?0:1].push(rte)
+      pri_lsts[priority ? 0 : 1].push(rte)
       return this
 
     async invoke(pkt, ctx) ::

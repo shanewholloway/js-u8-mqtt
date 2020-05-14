@@ -1,19 +1,27 @@
-import {somewhere_in_your_code} from './_demo_common.mjs'
 import mqtt_client from '../esm/node/v5.mjs' // 'u8-mqtt/esm/node/v5.mjs'
 
+import {somewhere_in_your_code, goodbye} from './_demo_common.mjs'
+
+
 const my_mqtt = mqtt_client()
+  //.with_tcp(1883, '127.0.0.1')
+  .with_tcp(1883, 'test.mosquitto.org')
 
-// allow playing with my_mqtt from Node REPL 
-globalThis.my_mqtt = my_mqtt
 
-my_mqtt
-  .with_tcp(1883, '127.0.0.1')
-  //.with_tcp(1883, 'test.mosquitto.org')
-  .then(somewhere_in_your_code)
-  .then(()=> {
+async function on_live(my_mqtt) {
+  try {
+    await somewhere_in_your_code(my_mqtt)
+
     my_mqtt.send(
       'u8-mqtt-demo/another/apple/orange',
-      'Node-side Fruity fun')
-  })
-  .catch(err => console.error(err))
+      'Node-side v5 Fruity fun')
 
+    //await goodbye(my_mqtt)
+  } catch (err) {
+    console.warn(err)
+  }
+}
+
+
+// allow playing with my_mqtt from Node REPL
+globalThis.my_mqtt = my_mqtt

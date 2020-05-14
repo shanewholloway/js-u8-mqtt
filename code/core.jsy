@@ -19,7 +19,7 @@ export class MQTTCoreClient extends MQTTBaseClient ::
 
 
   #IF HAS_STREAM
-    async with_stream(duplex_stream) ::
+    with_stream(duplex_stream) ::
       const on_mqtt_chunk = this._conn_.set @
         this._mqtt_session
         u8_pkt => duplex_stream.write(u8_pkt)
@@ -33,27 +33,30 @@ export class MQTTCoreClient extends MQTTBaseClient ::
       return this
 
 
-  async with_websock(websock) ::
+  with_websock(websock) ::
     if null == websock ::
       websock = 'ws://127.0.0.1:9001'
 
     if websock.origin || 'string' === typeof websock ::
       websock = new WebSocket(new URL(websock), ['mqtt'])
 
-    const {readyState} = websock
     websock.binaryType = 'arraybuffer'
+
+    let ready, {readyState} = websock
     if 1 !== readyState ::
       if 0 !== readyState ::
         throw new Error @ 'Invalid WebSocket readyState'
 
-      await new Promise @ y =>
-        websock.addEventListener @ 'open', y, {once: true}
+      ready = new Promise( y =>
+        websock.addEventListener('open', y, {once: true}))
 
 
     const {_conn_} = this
     const on_mqtt_chunk = _conn_.set @
       this._mqtt_session
-      u8_pkt => websock.send @ u8_pkt
+      async u8_pkt => @
+        await ready
+        websock.send(u8_pkt)
 
     websock.addEventListener @ 'close',
       @::

@@ -2,40 +2,25 @@ import {_mqtt_conn} from './_conn.jsy'
 import {_mqtt_topic_router} from './_router.jsy'
 import {_mqtt_dispatch} from './_dispatch.jsy'
 
-export default class MQTTBaseClient ::
+export default MQTTBaseClient
+export class MQTTBaseClient ::
   constructor(opt={}) ::
-    const {on_mqtt_type, on_live} = opt
-    if on_mqtt_type ::
-      this.on_mqtt_type = on_mqtt_type
-    if on_live ::
-      this.on_live = on_live
+    const {on_live} = opt
+    if (on_live) this.with_live(on_live)
 
     this._conn_ = _mqtt_conn @ this,
       this._init_dispatch(opt, this)
 
-  static create(opt) :: return new this(opt)
 
-  // Core API:
-
-  new_client_id(pre=[]) ::
-    return `${pre[0]||'u8-mqtt--'}${Math.random().toString(36).slice(2)}${pre[1]||''}`
-
-  client_id(pre) ::
-    let cid = this._client_id
-    if undefined === cid ::
-      this._client_id = cid =
-        this.new_client_id(pre)
-    return cid
-
-  auth(pkt={}) ::
-    return this._send('auth', pkt, 'auth')
+  // Handshaking Packets
 
   async connect(pkt={}) ::
-    const {client_id: cid} = pkt
+    let {client_id: cid} = pkt
     if ! cid ::
-      pkt.client_id = this.client_id()
+      pkt.client_id = cid = this.init_client_id(['u8-mqtt--'])
     else if Array.isArray(cid) ::
-      pkt.client_id = this.client_id(cid)
+      pkt.client_id = cid = this.init_client_id(cid)
+    else :: this.client_id = cid
 
     if null == pkt.keep_alive ::
       pkt.keep_alive = 60
@@ -52,7 +37,11 @@ export default class MQTTBaseClient ::
     this._conn_.reset()
     return res
 
+  auth(pkt={}) ::
+    return this._send('auth', pkt, 'auth')
+
   ping() :: return this._send('pingreq', null, 'pingresp')
+
 
   // alias: sub
   subscribe(pkt, ex) ::
@@ -64,6 +53,14 @@ export default class MQTTBaseClient ::
     pkt = _as_topics(pkt, ex)
     return this._send('unsubscribe', pkt, pkt)
 
+  // alias: sub_route
+  subscribe_topic(topic_route, ...args) ::
+    let topic = topic_route.replace(/[:*].*$/, '#')
+    this.on_topic @ topic_route, true, args.pop() // handler
+    this.subscribe @ [[ topic ]], args.pop() // ex
+    return this
+
+
   // alias: pub
   publish(pkt) :: return _pub @ this, pkt.qos, pkt
   post(topic, payload) :: return _pub @ this, 0, {topic, payload}
@@ -71,28 +68,58 @@ export default class MQTTBaseClient ::
   json_post(topic, msg) :: return _pub @ this, 0, {topic, msg, arg:'msg'}
   json_send(topic, msg) :: return _pub @ this, 1, {topic, msg, arg:'msg'}
 
-  // alias: sub_route
-  subscribe_route(topic, ...args) ::
-    this.add_route @ true, topic, args.pop()
-    this.subscribe @#
-      @[] topic, args.shift()|0 // qos
+
+
+  // Utility Methods
+
+  init_client_id(parts) ::
+    let cid = this.client_id
+
+    if undefined === cid ::
+      this.client_id = cid = (
+        #IF PLAT_WEB
+          this.sess_client_id(parts)
+        #ELSE
+          this.new_client_id(parts)
+        )
+
+    return cid
+
+  new_client_id(parts) ::
+    return parts.slice(0,2)
+      .join @ Math.random().toString(36).slice(2)
+
+  #IF PLAT_WEB
+    sess_client_id(parts) ::
+      let key = `client_id ${parts.join('')}`
+      let cid = sessionStorage.getItem(key)
+      if undefined === cid ::
+        cid = this.new_client_id(parts)
+        sessionStorage.setItem(key, cid)
+      return cid
+
+
+  with_live(on_live) ::
+    this.on_live = on_live
     return this
-
-
-  /* async _send(type, pkt) -- provided by _conn_ and transport */
 
   on_live(client) ::
 
+
+  // Internal API
+
+  /* async _send(type, pkt) -- provided by _conn_ and transport */
+
   _init_router(opt) ::
     const router = _mqtt_topic_router(this)
-    this.add_route = router.add
+    this.on_topic = router.add
     return this.router = router
 
   _init_dispatch(opt) ::
     const router = this._init_router(opt, this)
 
     const tgt = @{}
-      __proto__: this.on_mqtt_type || {}
+      __proto__: opt.on_mqtt_type || {}
       mqtt_publish: router.invoke
 
     return _mqtt_dispatch @ this, tgt
@@ -102,9 +129,9 @@ export default class MQTTBaseClient ::
   const p = MQTTBaseClient.prototype
   Object.assign @ p, @{}
     pub: p.publish
-    sub_route: p.subscribe_route
     sub: p.subscribe
     unsub: p.unsubscribe
+    sub_topic: p.subscribe_topic
 
   /*
     p.on_mqtt_type = {

@@ -834,8 +834,10 @@ function _mqtt_conn(client, [on_mqtt, pkt_future]) {
       if (_asy_send === _send) {
         _send = await q0;}
 
+      // await connack response
+      const res = await _send(...args);
+
       client._send = _send;
-      const res = _send(...args);
       q.notify(_send);
       return res}
 
@@ -914,20 +916,20 @@ function _mqtt_topic_router() {
 
   return {find,
 
-    add(...args) {
+    add(topic_route, ...args) {
       let fn = args.pop();
+      const priority = args.pop();
+
       if ('function' !== typeof fn) {
         if (false === fn) {
           fn = _ignore;}
         else throw new TypeError()}
 
-      const priority = true === args[0] && args.shift();
-
       let rte = _rxp_parse(
-        args.shift()
-          .replace(/[+#]$/, '*'));
+        topic_route.replace(/[+#]$/, '*'));
+
       rte.tgt = fn;
-      pri_lsts[priority?0:1].push(rte);
+      pri_lsts[priority ? 0 : 1].push(rte);
       return this}
 
   , async invoke(pkt, ctx) {
@@ -1070,38 +1072,22 @@ function _mqtt_dispatch(opt, target) {
 
 class MQTTBaseClient {
   constructor(opt={}) {
-    const {on_mqtt_type, on_live} = opt;
-    if (on_mqtt_type) {
-      this.on_mqtt_type = on_mqtt_type;}
-    if (on_live) {
-      this.on_live = on_live;}
+    const {on_live} = opt;
+    if (on_live) this.with_live(on_live);
 
     this._conn_ = _mqtt_conn(this,
       this._init_dispatch(opt, this)); }
 
-  static create(opt) {return new this(opt)}
 
-  // Core API:
-
-  new_client_id(pre=[]) {
-    return `${pre[0]||'u8-mqtt--'}${Math.random().toString(36).slice(2)}${pre[1]||''}`}
-
-  client_id(pre) {
-    let cid = this._client_id;
-    if (undefined === cid) {
-      this._client_id = cid =
-        this.new_client_id(pre);}
-    return cid}
-
-  auth(pkt={}) {
-    return this._send('auth', pkt, 'auth')}
+  // Handshaking Packets
 
   async connect(pkt={}) {
-    const {client_id: cid} = pkt;
+    let {client_id: cid} = pkt;
     if (! cid) {
-      pkt.client_id = this.client_id();}
+      pkt.client_id = cid = this.init_client_id(['u8-mqtt--']);}
     else if (Array.isArray(cid)) {
-      pkt.client_id = this.client_id(cid);}
+      pkt.client_id = cid = this.init_client_id(cid);}
+    else {this.client_id = cid;}
 
     if (null == pkt.keep_alive) {
       pkt.keep_alive = 60;}
@@ -1118,7 +1104,11 @@ class MQTTBaseClient {
     this._conn_.reset();
     return res}
 
+  auth(pkt={}) {
+    return this._send('auth', pkt, 'auth')}
+
   ping() {return this._send('pingreq', null, 'pingresp')}
+
 
   // alias: sub
   subscribe(pkt, ex) {
@@ -1130,6 +1120,14 @@ class MQTTBaseClient {
     pkt = _as_topics(pkt, ex);
     return this._send('unsubscribe', pkt, pkt)}
 
+  // alias: sub_route
+  subscribe_topic(topic_route, ...args) {
+    let topic = topic_route.replace(/[:*].*$/, '#');
+    this.on_topic(topic_route, true, args.pop() );// handler
+    this.subscribe([[ topic ]], args.pop() );// ex
+    return this}
+
+
   // alias: pub
   publish(pkt) {return _pub(this, pkt.qos, pkt)}
   post(topic, payload) {return _pub(this, 0, {topic, payload})}
@@ -1137,28 +1135,58 @@ class MQTTBaseClient {
   json_post(topic, msg) {return _pub(this, 0, {topic, msg, arg:'msg'})}
   json_send(topic, msg) {return _pub(this, 1, {topic, msg, arg:'msg'})}
 
-  // alias: sub_route
-  subscribe_route(topic, ...args) {
-    this.add_route(true, topic, args.pop());
-    this.subscribe([
-      [topic, args.shift()|0 ] ]);// qos
+
+
+  // Utility Methods
+
+  init_client_id(parts) {
+    let cid = this.client_id;
+
+    if (undefined === cid) {
+      this.client_id = cid = (
+        
+        this.sess_client_id(parts)
+        
+
+        );}
+
+    return cid}
+
+  new_client_id(parts) {
+    return parts.slice(0,2)
+      .join(Math.random().toString(36).slice(2)) }
+
+  
+  sess_client_id(parts) {
+    let key = `client_id ${parts.join('')}`;
+    let cid = sessionStorage.getItem(key);
+    if (undefined === cid) {
+      cid = this.new_client_id(parts);
+      sessionStorage.setItem(key, cid);}
+    return cid}
+
+
+  with_live(on_live) {
+    this.on_live = on_live;
     return this}
-
-
-  /* async _send(type, pkt) -- provided by _conn_ and transport */
 
   on_live(client) {}
 
+
+  // Internal API
+
+  /* async _send(type, pkt) -- provided by _conn_ and transport */
+
   _init_router(opt) {
     const router = _mqtt_topic_router();
-    this.add_route = router.add;
+    this.on_topic = router.add;
     return this.router = router}
 
   _init_dispatch(opt) {
     const router = this._init_router(opt, this);
 
     const tgt ={
-      __proto__: this.on_mqtt_type || {}
+      __proto__: opt.on_mqtt_type || {}
     , mqtt_publish: router.invoke};
 
     return _mqtt_dispatch(this, tgt) } }
@@ -1168,9 +1196,9 @@ class MQTTBaseClient {
   const p = MQTTBaseClient.prototype;
   Object.assign(p,{
     pub: p.publish
-  , sub_route: p.subscribe_route
   , sub: p.subscribe
-  , unsub: p.unsubscribe} );
+  , unsub: p.unsubscribe
+  , sub_topic: p.subscribe_topic} );
 
   /*
     p.on_mqtt_type = {
@@ -1207,13 +1235,9 @@ function _as_topics(pkt, ex) {
     return {topics:[... pkt], ... ex}}
   return ex ? {...pkt, ...ex} : pkt}
 
-class MQTTClient extends MQTTBaseClient {
-  
-
-
-
-
-
+class MQTTCoreClient extends MQTTBaseClient {
+  static _with_session(mqtt_session) {
+    this.prototype._mqtt_session = mqtt_session;}
 
 
   
@@ -1224,33 +1248,45 @@ class MQTTClient extends MQTTBaseClient {
 
 
 
+  
 
 
 
 
 
 
-  async with_websock(websock) {
+
+
+
+
+
+
+
+
+  with_websock(websock) {
     if (null == websock) {
       websock = 'ws://127.0.0.1:9001';}
 
     if (websock.origin || 'string' === typeof websock) {
       websock = new WebSocket(new URL(websock), ['mqtt']);}
 
-    const {readyState} = websock;
     websock.binaryType = 'arraybuffer';
+
+    let ready, {readyState} = websock;
     if (1 !== readyState) {
       if (0 !== readyState) {
         throw new Error('Invalid WebSocket readyState') }
 
-      await new Promise(y =>
-        websock.addEventListener('open', y, {once: true}) ); }
+      ready = new Promise( y =>
+        websock.addEventListener('open', y, {once: true}));}
 
 
     const {_conn_} = this;
     const on_mqtt_chunk = _conn_.set(
-      this.mqtt_session
-    , u8_pkt => websock.send(u8_pkt) );
+      this._mqtt_session
+    , async u8_pkt =>(
+        await ready
+      , websock.send(u8_pkt)) );
 
     websock.addEventListener('close',
       (() => {
@@ -1265,8 +1301,8 @@ class MQTTClient extends MQTTBaseClient {
 
     return this} }
 
-class MQTTClient_v4 extends MQTTClient {}
-MQTTClient_v4.prototype.mqtt_session = mqtt_session_ctx(4);
+class MQTTClient_v4 extends MQTTCoreClient {}
+MQTTClient_v4._with_session(mqtt_session_ctx(4));
 
 const mqtt_v4 = opt => new MQTTClient_v4(opt);
 
