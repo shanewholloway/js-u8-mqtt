@@ -58,11 +58,11 @@ export class MQTTBaseClient ::
 
 
   // alias: pub
-  publish(pkt) :: return _pub @ this, pkt.qos, pkt
-  post(topic, payload) :: return _pub @ this, 0, {topic, payload}
-  send(topic, payload) :: return _pub @ this, 1, {topic, payload}
-  json_post(topic, msg) :: return _pub @ this, 0, {topic, msg, arg:'msg'}
-  json_send(topic, msg) :: return _pub @ this, 1, {topic, msg, arg:'msg'}
+  publish(pkt) :: return _pub(this, pkt)
+  post(topic, payload) :: return _pub(this, {qos:0, topic, payload})
+  send(topic, payload) :: return _pub(this, {qos:1, topic, payload})
+  json_post(topic, msg) :: return _pub(this, {qos:0, topic, msg, arg:'msg'})
+  json_send(topic, msg) :: return _pub(this, {qos:1, topic, msg, arg:'msg'})
 
 
 
@@ -138,17 +138,17 @@ export class MQTTBaseClient ::
   */
 
 
-function _pub(self, qos, pkt) ::
-  let key, {msg, payload} = pkt
+function _pub(self, pkt) ::
+  let key, {qos, msg, payload} = pkt
   if undefined === payload ::
     if undefined === msg ::
       const arg = pkt.arg || 'payload'
-      return v => _pub @ self, qos, {...pkt, [arg]: v}
+      return v => _pub @ self, {...pkt, [arg]: v}
 
     pkt.payload = JSON.stringify(msg)
 
-  if qos > 0 :: key = pkt
-  return self._send @ 'publish', pkt, key
+  if (1 === qos) key = pkt
+  return self._send('publish', pkt, key)
 
 function _as_topics(pkt, ex) ::
   if 'string' === typeof pkt ::
