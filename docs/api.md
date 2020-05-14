@@ -88,6 +88,8 @@ See [regexparam][] for routing rule details for `topic_route`.
   * `mqtt.subscribe(topic_list, ex)` -- alias for `mqtt.subscribe({topics: [... topic_list], ...ex})`
     * `mqtt.sub(topic_list, ex)` -- alias for `mqtt.subscribe({topics: [... topic_list], ...ex})`
 
+  Returns a `Promise<[suback pkt, error]>` in the style of an [Option / Maybe monad](https://en.wikipedia.org/wiki/Option_type).
+
   See [`u8-mqtt-packet/docs/mqtt_codec_subscribe.md`](https://github.com/shanewholloway/js-u8-mqtt-packet/blob/master/docs/mqtt_codec_subscribe.md) for MQTT packet encoding details
 
 * `mqtt.unsubscribe(pkt)` -- Encode and send an MQTT unsubscribe packet.
@@ -97,11 +99,14 @@ See [regexparam][] for routing rule details for `topic_route`.
   * `mqtt.unsubscribe(topic_list, ex)` -- alias for `mqtt.unsubscribe({topics: [... topic_list], ...ex})`
     * `mqtt.unsub(topic_list, ex)` -- alias for `mqtt.unsubscribe({topics: [... topic_list], ...ex})`
 
+  Returns a `Promise<[unsuback pkt, error]>` in the style of an [Option / Maybe monad](https://en.wikipedia.org/wiki/Option_type).
 
   See [`u8-mqtt-packet/docs/mqtt_codec_unsubscribe.md`](https://github.com/shanewholloway/js-u8-mqtt-packet/blob/master/docs/mqtt_codec_unsubscribe.md) for MQTT packet encoding details
 
 * `mqtt.subscribe_topic(topic, [qos=0,] handler)` -- alias for `mqtt.on_topic(topic, true, handler)` and `mqtt.subscribe([[topic, qos]])`
   * `mqtt.sub_topic` -- alias for `mqtt.subscribe_topic`
+
+  Returns `this`
 
 
 #### Publish Packets
@@ -109,18 +114,20 @@ See [regexparam][] for routing rule details for `topic_route`.
 * `mqtt.publish(pkt)` -- Encode and send an MQTT publish packet. Handles `puback` for `QOS:1`.
   * `mqtt.pub(pkt)` -- alias for `mqtt.publish(pkt)`
 
+  Returns a `Promise<[puback pkt, error]>` in the style of an [Option / Maybe monad](https://en.wikipedia.org/wiki/Option_type).
+
   See [`u8-mqtt-packet/docs/mqtt_codec_publish.md`](https://github.com/shanewholloway/js-u8-mqtt-packet/blob/master/docs/mqtt_codec_publish.md) for MQTT packet encoding details
 
-* `mqtt.post(topic, payload)` -- alias for `mqtt.publish({topic, qos: 0, payload})`
+* `mqtt.post(topic, payload)` -- alias for `mqtt.publish({qos: 0, topic, payload})`
   * `mqtt.post(topic)` -- closure of `payload => mqtt.post(topic, payload)`
 
-* `mqtt.send(topic, payload)` -- alias for `mqtt.publish({topic, qos: 1, payload})`
+* `mqtt.send(topic, payload)` -- alias for `mqtt.publish({qos: 1, topic, payload})`
   * `mqtt.send(topic)` -- closure of `payload => mqtt.send(topic, payload)`
 
-* `mqtt.json_post(topic, msg)` -- alias for `mqtt.publish({topic, qos: 0, payload: JSON.stringify(msg))`
+* `mqtt.json_post(topic, msg)` -- alias for `mqtt.publish({qos: 0, topic, payload: JSON.stringify(msg))`
   * `mqtt.json_post(topic)` -- closure of `msg => mqtt.json_post(topic, msg)`
 
-* `mqtt.json_send(topic, msg)` -- alias for `mqtt.publish({topic, qos: 1, payload: JSON.stringify(msg))`
+* `mqtt.json_send(topic, msg)` -- alias for `mqtt.publish({qos: 1, topic, payload: JSON.stringify(msg))`
   * `mqtt.json_send(topic)` -- closure of `msg => mqtt.json_send(topic, msg)`
 
 
@@ -135,6 +142,8 @@ See [u8-mqtt-packet][] for MQTT packet encoding details
 
   If `pkt.keep_alive` is nullish, it is defaulted to `60`. After recieving the `connack` reply packet, an automated ping process is started via `mqtt._conn_.ping(pkt.keep_alive)`
 
+  Returns a `Promise<[connack pkt, error]>` in the style of an [Option / Maybe monad](https://en.wikipedia.org/wiki/Option_type).
+
   See [`u8-mqtt-packet/docs/mqtt_codec_connect.md`](https://github.com/shanewholloway/js-u8-mqtt-packet/blob/master/docs/mqtt_codec_connect.md) for MQTT packet encoding details
 
 * `mqtt.disconnect(pkt)` -- Encode and send an MQTT disconnect packet. All arguments are optional. Resets the `_conn` connection.
@@ -148,6 +157,8 @@ See [u8-mqtt-packet][] for MQTT packet encoding details
 * `mqtt.ping()` -- Encode and send an MQTT pingreq packet. Returns a promise that is resolved after a `pingresp` packet is received. 
 
   Note that `mqtt.connect` automatically pings the MQTT server based on `keep_alive` setting.
+
+  Returns a `Promise<[pingresp pkt, error]>` in the style of an [Option / Maybe monad](https://en.wikipedia.org/wiki/Option_type).
 
   See [`u8-mqtt-packet/docs/mqtt_codec_pingreq_pingresp.md`](https://github.com/shanewholloway/js-u8-mqtt-packet/blob/master/docs/mqtt_codec_pingreq_pingresp.md) for MQTT packet encoding details
 
