@@ -35,7 +35,7 @@ export async function somewhere_in_your_code(my_mqtt) {
 
 export const delay = ms => new Promise(y => setTimeout(y, ms))
 
-export async function goodbye() {
+export async function goodbye(my_mqtt) {
   await delay(100)
 
   console.log()

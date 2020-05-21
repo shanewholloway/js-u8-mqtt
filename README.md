@@ -37,6 +37,9 @@ Targeting [MQTT-3.1.1 (v4)][spec-3.1.1] and [MQTT-5.0.0 (v5)][spec-5.0.0] compat
 // using NodeJS
 import mqtt_client from 'u8-mqtt/esm/node/v4.mjs'
 
+// or using Deno
+import mqtt_client from 'u8-mqtt/esm/deno/v4.mjs'
+
 // or using WebSockets
 import mqtt_client from 'u8-mqtt/esm/web/v4.mjs'
 
@@ -44,7 +47,7 @@ import mqtt_client from 'u8-mqtt/esm/web/v4.mjs'
 const my_mqtt = mqtt_client()
 
 
-// Connect using NodeJS
+// Connect using NodeJS or Deno
 my_mqtt.with_tcp(1883, '127.0.0.1')
 
 // or connect using WebSockets

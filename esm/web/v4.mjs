@@ -1258,6 +1258,19 @@ class MQTTCoreClient extends MQTTBaseClient {
     return this}
 
 
+  with_async_iter(async_iter, write_u8_pkt) {
+    const on_mqtt_chunk = this._conn_.set(
+      this._mqtt_session, write_u8_pkt);
+
+    this._msg_loop = ((async () => {
+      for await (const chunk of async_iter)
+        on_mqtt_chunk(chunk);
+
+      this._conn_.reset();})());
+
+    return this}
+
+
   
 
 
@@ -1266,12 +1279,21 @@ class MQTTCoreClient extends MQTTBaseClient {
 
 
 
+
+
+
+
+
   
 
 
 
 
 
+
+
+
+  
 
 
 

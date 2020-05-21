@@ -33,29 +33,51 @@ export class MQTTCoreClient extends MQTTBaseClient ::
     return this
 
 
+  with_async_iter(async_iter, write_u8_pkt) ::
+    const on_mqtt_chunk = this._conn_.set(
+      this._mqtt_session, write_u8_pkt)
+
+    this._msg_loop = @!>
+      for await (const chunk of async_iter)
+        on_mqtt_chunk(chunk)
+
+      this._conn_.reset()
+
+    return this
+
+
+  #IF PLAT_DENO
+    async with_tcp(port, hostname) ::
+      if !Number.isFinite(port) ::
+        ({port, host: hostname} = port)
+
+      const conn = await Deno.connect @:
+        port: port || 1883, hostname, transport: 'tcp'
+
+      return this.with_async_iter @
+        Deno.iter(conn),
+        u8_pkt => conn.write(u8_pkt)
+
+
   #IF PLAT_NODEJS
-    with_tcp(...args) ::
-      const sock = args.length
-        ? tcp_connect(...args)
-        : tcp_connect(1883)
+    async with_tcp(port, hostname) ::
+      if !Number.isFinite(port) ::
+        ({port, host: hostname} = port)
+
+      const sock = tcp_connect(port, hostname)
       return this.with_stream(sock)
 
 
   #IF HAS_STREAM
-    with_stream(duplex_stream) ::
-      const on_mqtt_chunk = this._conn_.set @
-        this._mqtt_session
-        u8_pkt => duplex_stream.write(u8_pkt)
+    with_stream(read_stream, write_stream) ::
+      if undefined === write_stream ::
+        write_stream = read_stream
 
-      duplex_stream.once @ 'end', this._conn_.reset
+      read_stream.once @ 'end', this._conn_.reset
+      return this.with_async_iter @ read_stream,
+        u8_pkt => write_stream.write(u8_pkt)
 
-      this._msg_loop = @!>
-        for await (const chunk of duplex_stream)
-          on_mqtt_chunk(chunk)
 
-        this._conn_.reset()
-
-      return this
 
 
   with_websock(websock) ::
