@@ -1086,7 +1086,7 @@ class MQTTBaseClient {
   async connect(pkt={}) {
     let {client_id: cid} = pkt;
     if (! cid) {
-      pkt.client_id = cid = this.init_client_id(['u8-mqtt--']);}
+      pkt.client_id = cid = this.init_client_id(['u8-mqtt--', '']);}
     else if (Array.isArray(cid)) {
       pkt.client_id = cid = this.init_client_id(cid);}
     else {this.client_id = cid;}
@@ -1155,8 +1155,7 @@ class MQTTBaseClient {
     return cid}
 
   new_client_id(parts) {
-    return parts.slice(0,2)
-      .join(Math.random().toString(36).slice(2)) }
+    return [parts[0], Math.random().toString(36).slice(2), parts[1]].join('')}
 
   
 
