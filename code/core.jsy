@@ -34,8 +34,9 @@ export class MQTTCoreClient extends MQTTBaseClient ::
 
 
   with_async_iter(async_iter, write_u8_pkt) ::
-    const on_mqtt_chunk = this._conn_.set(
-      this._mqtt_session, write_u8_pkt)
+    const on_mqtt_chunk = this._conn_.set @
+      this._mqtt_session(),
+      write_u8_pkt
 
     this._msg_loop = @!>
       for await (const chunk of async_iter)
@@ -100,7 +101,7 @@ export class MQTTCoreClient extends MQTTBaseClient ::
 
     const {_conn_} = this
     const on_mqtt_chunk = _conn_.set @
-      this._mqtt_session
+      this._mqtt_session(),
       async u8_pkt => @
         await ready
         websock.send(u8_pkt)
