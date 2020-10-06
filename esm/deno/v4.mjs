@@ -826,8 +826,7 @@ function _mqtt_conn(client, [on_mqtt, pkt_future]) {
       _is_set = false;
 
       // call client.on_reconnect in next promise microtask
-      Promise.resolve(client)
-        .then(client.on_reconnect);}
+      _async_evt(client, 'on_reconnect');}
 
   , ping(td) {
       tid_ping = clearInterval(tid_ping);
@@ -850,8 +849,7 @@ function _mqtt_conn(client, [on_mqtt, pkt_future]) {
   , set(mqtt_session, send_u8_pkt) {
       _is_set = true;
 
-      const [mqtt_decode, mqtt_encode] =
-        mqtt_session();
+      const [mqtt_decode, mqtt_encode] = mqtt_session;
 
       const on_mqtt_chunk = u8_buf =>
         on_mqtt(
@@ -871,12 +869,15 @@ function _mqtt_conn(client, [on_mqtt, pkt_future]) {
       q0.notify(_send);
 
       // call client.on_live in next promise microtask
-      Promise.resolve(client)
-        .then(client.on_live);
+      _async_evt(client, 'on_live');
 
       return on_mqtt_chunk} } }
 
 
+async function _async_evt(obj, on_evt) {
+  // microtask break
+  obj[await on_evt](obj);
+}
 function _tiny_deferred_queue() {
   const q = []; // tiny resetting deferred queue
   q.then = y => { q.push(y); };
@@ -1259,7 +1260,8 @@ class MQTTCoreClient extends MQTTBaseClient {
 
   with_async_iter(async_iter, write_u8_pkt) {
     const on_mqtt_chunk = this._conn_.set(
-      this._mqtt_session, write_u8_pkt);
+      this._mqtt_session(),
+      write_u8_pkt);
 
     this._msg_loop = ((async () => {
       for await (const chunk of async_iter)
@@ -1324,8 +1326,8 @@ class MQTTCoreClient extends MQTTBaseClient {
 
     const {_conn_} = this;
     const on_mqtt_chunk = _conn_.set(
-      this._mqtt_session
-    , async u8_pkt =>(
+      this._mqtt_session(),
+      async u8_pkt =>(
         await ready
       , websock.send(u8_pkt)) );
 
@@ -1342,8 +1344,9 @@ class MQTTCoreClient extends MQTTBaseClient {
 
     return this} }
 
-class MQTTClient_v4 extends MQTTCoreClient {}
-MQTTClient_v4._with_session(mqtt_session_ctx(4));
+class MQTTClient_v4 extends MQTTCoreClient {
+  _mqtt_session() { return mqtt_session_ctx(4)() }
+}
 
 const mqtt_v4 = opt => new MQTTClient_v4(opt);
 

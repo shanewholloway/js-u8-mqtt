@@ -1,7 +1,7 @@
 {
   "name": "u8-mqtt",
   "description": "MQTT client using Uint8Array -- suitable for use in the Browser, NodeJS, and Deno.land.",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "license": "BSD-2-Clause",
   "author": "Shane Holloway <shane.holloway@ieee.org>",
   "homepage": "https://github.com/shanewholloway/js-u8-mqtt#readme",
@@ -36,15 +36,19 @@
     "rollup-plugin-dgnotify": "^0.1.7",
     "rollup-plugin-jsy": "^1.7.1",
     "rollup-plugin-terser": "^7.0.2",
-    "u8-mqtt-packet": "^0.1.2"
+    "u8-mqtt-packet": "^0.2.0"
   },
   "scripts": {
-    "start": "qsrv -- *.html esm/",
+    "start": "npx tmex $PWD -rn _cli watch serve",
+    "_cli": "true",
+    "serve": "qsrv -- *.html esm/",
     "clean": "rm -rf ./cjs/* ./esm/*",
     "build": "rollup --config",
     "watch": "npm -s run build -- --watch",
-    "demo:node": "node ./demo/node_v4.mjs",
-    "demo:deno": "deno run --allow-net ./demo/deno_v4.mjs",
+    "demo:node_v4": "node ./demo/node_v4.mjs",
+    "demo:node_v5": "node ./demo/node_v5.mjs",
+    "demo:deno_v4": "deno run --allow-net ./demo/deno_v4.mjs",
+    "demo:deno_v5": "deno run --allow-net ./demo/deno_v5.mjs",
     "pretest": "npm -s run build",
     "test": "true"
   }
