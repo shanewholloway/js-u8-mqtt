@@ -10,16 +10,18 @@ function encode_varint(n, a=[]) {
 
 /*
 export function decode_varint_loop(u8, i=0) {
+  let i0 = i
   let shift = 0, n = (u8[i] & 0x7f)
   while ( 0x80 & u8[i++] )
     n |= (u8[i] & 0x7f) << (shift += 7)
 
-  return [n, i]
+  return [n, i, i0]
 }
 */
 
 
 function decode_varint(u8, i=0) {
+  let i0 = i;
   // unrolled for a max of 4 chains
   let n = (u8[i] & 0x7f) <<  0;
   if ( 0x80 & u8[i++] ) {
@@ -31,44 +33,35 @@ function decode_varint(u8, i=0) {
       }
     }
   }
-  return [n, i]
+  return [n, i, i0]
 }
-
-function _mqtt_raw_pkt_decode_v(by_ref) {
-  const [u8] = by_ref;
-  const [len_body, len_vh] = decode_varint(u8, 1);
-
-  const len_pkt = len_body + len_vh;
-  if ( u8.byteLength < len_pkt ) {
-    by_ref.length = 1; // truncate
-    return true
-  }
-
-  by_ref[0] = u8.subarray(len_pkt);
-  by_ref[1] = u8[0];
-  by_ref[2] = 0 === len_body ? null
-      : u8.subarray(len_vh, len_pkt);
-}
-
 
 function _mqtt_raw_pkt_dispatch(decode_raw_pkt) {
-  const l = [new Uint8Array(0)]; // reuse array to prevent garbage collection churn on ephemeral ones
+  let u8 = new Uint8Array(0);
   return u8_buf => {
-    l[0] = 0 === l[0].byteLength
-      ? u8_buf : _u8_join(l[0], u8_buf);
+    u8 = 0 === u8.byteLength
+      ? u8_buf : _u8_join(u8, u8_buf);
 
     const res = [];
-    do {
-      if (_mqtt_raw_pkt_decode_v(l))
+    while (1) {
+      const [len_body, len_vh] = decode_varint(u8, 1);
+      const len_pkt = len_body + len_vh;
+
+      if ( u8.byteLength < len_pkt )
         return res
 
-      const pkt = decode_raw_pkt(l[1], l[2]);
+      let b0 = u8[0];
+      let u8_body = 0 === len_body ? null
+        : u8.subarray(len_vh, len_pkt);
+
+      u8 = u8.subarray(len_pkt);
+
+      const pkt = decode_raw_pkt(b0, u8_body);
       if (undefined !== pkt && null !== pkt)
         res.push( pkt );
-    } while (1)
+    }
   }
 }
-
 
 function _u8_join(a, b) {
   const alen = a.byteLength;
@@ -159,9 +152,17 @@ class mqtt_type_reader {
 
   vint() {
     const {buf, step} = this;
-    const [n, vi] = decode_varint(buf, step(0));
-    step(vi);
+    const [n, vi, vi0] = decode_varint(buf, step(0));
+    step(vi - vi0);
     return n
+  }
+
+  vbuf() {
+    const {buf, step} = this;
+    const [n, vi, vi0] = decode_varint(buf, step(0));
+    step(n + vi - vi0);
+    return 0 === n ? null
+      : buf.subarray(vi, step(0))
   }
 
   bin() {
@@ -192,25 +193,19 @@ class mqtt_type_reader {
   }
 
   props() {
-    const {buf, step} = this;
+    let sub = this.vbuf();
+    return null === sub ? null
+      : this._fork(sub, 0)._read_props([])
+  }
 
-    const [len, vi] = decode_varint(buf, step(0));
-    const end_part = vi + len;
-    step(end_part);
-    if (0 === len)
-      return null
-
-    const prop_entries = [];
-    const rdr = this._fork(
-      buf.subarray(vi, end_part) );
-
-    while (rdr.has_more()) {
-      const {name, type} = mqtt_props.get( rdr.u8() );
-      const value = rdr[type]();
-      prop_entries.push([ name, value ]);
+  _read_props(lst) {
+    while (this.has_more()) {
+      let k = this.u8();
+      let p = mqtt_props.get( k );
+      let v = this[p.type]();
+      lst.push([p.name, v]);
     }
-
-    return prop_entries
+    return lst
   }
 }
 
@@ -290,13 +285,10 @@ function mqtt_decode_publish(ns) {
     if (0 !== qos)
       pkt.pkt_id = rdr.u16();
 
-    if (5 <= pkt.mqtt_level) {
+    if (5 <= pkt.mqtt_level)
       pkt.props = rdr.props();
-      pkt.payload = rdr.flush();
-    } else {
-      pkt.payload = rdr.flush();
-    }
 
+    pkt.payload = rdr.flush();
     return pkt }
 }
 
@@ -467,6 +459,7 @@ function _mqtt_pkt_rope(hdr, n, rope) {
   return pkt
 }
 
+const _is_array = Array.isArray;
 const pack_utf8 = v => new TextEncoder('utf-8').encode(v);
 const pack_u16 = v => [ (v>>>8) & 0xff, v & 0xff ];
 const pack_u32 = v => [ (v>>>24) & 0xff, (v>>>16) & 0xff, (v>>>8) & 0xff, v & 0xff ];
@@ -530,10 +523,13 @@ class mqtt_type_writer {
     if (! props)
       return this.u8(0)
 
-    if (! Array.isArray(props))
+    if (! _is_array(props))
       props = props.entries
         ? Array.from(props.entries())
         : Object.entries(props);
+
+    if (0 === props.length)
+      return this.u8(0)
 
     const wrt = this._fork();
     for (const [name, value] of props) {
@@ -543,6 +539,12 @@ class mqtt_type_writer {
     }
 
     this.push(wrt.pack([]));
+  }
+
+  _fork() {
+    let self = { __proto__: this };
+    this._pkt_writer(self);
+    return self
   }
 }
 
@@ -650,7 +652,7 @@ function mqtt_encode_subscribe(ns) {
     const wrt = new mqtt_type_writer();
 
     wrt.u16(pkt.pkt_id);
-    if (5 <= pkt.mqtt_level)
+    if (5 <= mqtt_level)
       wrt.props(pkt.props);
 
     const f0 = _enc_subscribe_flags(pkt);
@@ -658,19 +660,14 @@ function mqtt_encode_subscribe(ns) {
       if ('string' === typeof each) {
         wrt.utf8(each);
         wrt.u8(f0);
-      }
-
-      else if (Array.isArray(each)) {
-        wrt.utf8(each[0]);
-        if (undefined !== each[1])
-          wrt.u8_flags(each[1], _enc_subscribe_flags);
-        else wrt.u8(f0);
-
       } else {
-        wrt.utf8(each.topic);
-        if (undefined !== each.opts)
-          wrt.u8_flags(each.opts, _enc_subscribe_flags);
-        else wrt.u8(f0);
+        let [topic, opts] =
+          _is_array(each) ? each
+            : [each.topic, each.opts];
+
+        wrt.utf8(topic);
+        if (undefined === opts) wrt.u8(f0);
+        else wrt.u8_flags(opts, _enc_subscribe_flags);
       }
     }
 
@@ -683,7 +680,7 @@ function mqtt_encode_unsubscribe(ns) {
     const wrt = new mqtt_type_writer();
 
     wrt.u16(pkt.pkt_id);
-    if (5 <= pkt.mqtt_level)
+    if (5 <= mqtt_level)
       wrt.props(pkt.props);
 
     for (const topic of pkt.topics)
@@ -702,9 +699,11 @@ function mqtt_encode_disconnect(ns) {
   return ns.disconnect = ( mqtt_level, pkt ) => {
     const wrt = new mqtt_type_writer();
 
-    if (5 <= mqtt_level) {
-      wrt.u8_reason(pkt.reason);
-      wrt.props(pkt.props);
+    if (pkt && 5 <= mqtt_level) {
+      if (pkt.reason || pkt.props) {
+        wrt.u8_reason(pkt.reason);
+        wrt.props(pkt.props);
+      }
     }
 
     return wrt.as_pkt(0xe0)
@@ -761,9 +760,9 @@ function _bind_mqtt_session_ctx(sess_decode, sess_encode, _pkt_ctx_) {
   sess_encode = _bind_mqtt_encode(sess_encode);
   _pkt_ctx_ = _bind_pkt_ctx(_pkt_ctx_);
 
-  return mqtt_level => ()=> {
-    let _base_ = {__proto__: _pkt_ctx_, mqtt_level, get _base_() { return _base_ }};
-    return [ sess_decode(_base_), sess_encode(_base_)] }
+  return mqtt_level => _base_ => {
+    _base_ = _base_ || {__proto__: _pkt_ctx_, mqtt_level, get _base_() { return _base_ }};
+    return [ sess_decode(_base_), sess_encode(_base_), _base_ ] }
 }
 
 function mqtt_session_ctx(mqtt_level) {
@@ -1264,6 +1263,7 @@ class MQTTCoreClient extends MQTTBaseClient {
       write_u8_pkt);
 
     this._msg_loop = ((async () => {
+      async_iter = await async_iter;
       for await (const chunk of async_iter)
         on_mqtt_chunk(chunk);
 
@@ -1273,6 +1273,8 @@ class MQTTCoreClient extends MQTTBaseClient {
 
 
   
+
+
 
 
 
