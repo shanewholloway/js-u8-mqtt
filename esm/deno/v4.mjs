@@ -873,9 +873,11 @@ function _mqtt_conn(client, [on_mqtt, pkt_future]) {
       return on_mqtt_chunk} } }
 
 
-async function _async_evt(obj, on_evt) {
-  // microtask break
-  obj[await on_evt](obj);
+async function _async_evt(obj, evt) {
+  // microtask break lookup
+  evt = obj[await evt];
+  if (undefined !== evt)
+    await evt.call(obj, obj);
 }
 function _tiny_deferred_queue() {
   const q = []; // tiny resetting deferred queue
