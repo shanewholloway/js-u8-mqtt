@@ -264,7 +264,7 @@ function mqtt_decode_connack(ns) {
   return ns[0x2] = (pkt, u8_body) => {
     const rdr = new mqtt_type_reader(u8_body, 0);
 
-    const flags = pkt.flags =
+    pkt.flags =
       rdr.u8_flags(_connack_flags_);
 
     pkt.reason = rdr.u8_reason(_connack_reason_);
