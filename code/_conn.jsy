@@ -19,7 +19,7 @@ export function _mqtt_conn(client, [on_mqtt, pkt_future]) ::
       _is_set = false
 
       // call client.on_reconnect in next promise microtask
-      _async_evt(client, 'on_reconnect')
+      _async_evt(client, client.on_reconnect)
 
     ping(td) ::
       tid_ping = clearInterval(tid_ping)
@@ -62,16 +62,15 @@ export function _mqtt_conn(client, [on_mqtt, pkt_future]) ::
       q0.notify(_send)
 
       // call client.on_live in next promise microtask
-      _async_evt(client, 'on_live')
+      _async_evt(client, client.on_live)
 
       return on_mqtt_chunk
 
 
 async function _async_evt(obj, evt) {
   // microtask break lookup
-  evt = obj[await evt]
   if (undefined !== evt)
-    await evt.call(obj, obj)
+    await evt.call(obj, await obj)
 }
 function _tiny_deferred_queue() {
   const q = [] // tiny resetting deferred queue
