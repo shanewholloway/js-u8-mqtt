@@ -885,7 +885,7 @@ function _tiny_deferred_queue() {
   return q
 }
 
-function _rxp_parse (str, loose) {
+function parse(str, loose) {
 	if (str instanceof RegExp) return { keys:false, pattern:str };
 	var c, o, tmp, ext, keys=[], pattern='', arr = str.split('/');
 	arr[0] || arr.shift();
@@ -931,7 +931,7 @@ function _mqtt_topic_router() {
           fn = _ignore;}
         else throw new TypeError()}
 
-      let rte = _rxp_parse(
+      let rte = parse(
         topic_route.replace(/[+#]$/, '*'));
 
       rte.tgt = fn;

@@ -1,11 +1,13 @@
 import mqtt_client from '../esm/web/v5.mjs' // 'u8-mqtt/esm/web/v5.mjs'
 
 import {somewhere_in_your_code, goodbye} from './_demo_common.mjs'
+import demo_cfg from './_demo_config.mjs'
 
+
+console.log('in web_v5.mjs')
 
 const my_mqtt = mqtt_client({on_live})
-  //.with_websock('ws://127.0.0.1:9001')
-  .with_websock('wss://test.mosquitto.org:8081')
+  .with_websock(demo_cfg.websock_url)
 
 
 async function on_live(my_mqtt) {
@@ -14,7 +16,7 @@ async function on_live(my_mqtt) {
 
     await my_mqtt.send(
       'u8-mqtt-demo/another/pineapple/mango',
-      'Web-side v5 Fruity fun')
+      `Web-side v5 Fruity fun: ${new Date}`)
 
     //await goodbye(my_mqtt)
   } catch (err) {

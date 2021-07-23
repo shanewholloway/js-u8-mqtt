@@ -1,7 +1,7 @@
 // Use [regexparam][] for url-like topic parsing
 //  [regexparam]: https://github.com/lukeed/regexparam
 
-import _rxp_parse from 'regexparam/dist/regexparam.mjs'
+import {parse as _rxp_parse} from 'regexparam'
 
 function _ignore(pkt, params, ctx) :: ctx.done = true
 

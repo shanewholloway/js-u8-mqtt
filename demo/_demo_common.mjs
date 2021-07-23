@@ -23,12 +23,12 @@ export async function somewhere_in_your_code(my_mqtt) {
 
   my_mqtt.publish({
     topic: 'u8-mqtt-demo/topic/node-side-fun-test',
-    payload: 'awesome from both web and node',
+    payload: 'Awesome from the web, NodeJS, and Deno',
     qos: 1,
   })
 
   my_mqtt.send(
-    'u8-mqtt-demo/another/grape/lime',
+    'u8-mqtt-demo/another/kiwi/starfruit',
     'Web/Node/Deno common source fruity fun')
 }
 
@@ -43,7 +43,7 @@ export async function goodbye(my_mqtt) {
   await delay(150)
 
   console.log()
-  console.log('Disconnecting')
+  console.log(`Disconnecting ${my_mqtt.client_id}`)
   await my_mqtt.post('u8-mqtt-demo/bye', `Nicely leaving: ${my_mqtt.client_id}`)
   await my_mqtt.disconnect()
   console.log('Bye!')
