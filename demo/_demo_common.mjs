@@ -10,6 +10,12 @@ export async function somewhere_in_your_code(my_mqtt) {
     .sub_topic('u8-mqtt-demo/bye', (pkt, params, ctx) => {
       console.log('other mqtt said bye:', params, [pkt.utf8()])
     })
+    .sub_topic('u8-mqtt-demo/json/*', (pkt, params, ctx) => {
+      console.log('json posted:', params, [pkt.json()])
+    })
+    .sub_topic('u8-mqtt-demo/obj/*', (pkt, params, ctx) => {
+      console.log('obj posted:', params, [pkt.payload])
+    })
 
   await my_mqtt.connect({
     client_id: ['my-mqtt--', '--demo'],
@@ -30,6 +36,31 @@ export async function somewhere_in_your_code(my_mqtt) {
   my_mqtt.send(
     'u8-mqtt-demo/another/kiwi/starfruit',
     'Web/Node/Deno common source fruity fun')
+
+
+  if (0) {
+    my_mqtt.json_post(
+      'u8-mqtt-demo/json/post',
+      {op: 'json_post', ts: new Date().toISOString() })
+    my_mqtt.json_send(
+      'u8-mqtt-demo/json/send',
+      {op: 'json_send', ts: new Date().toISOString() })
+    my_mqtt.json_store(
+      'u8-mqtt-demo/json/store',
+      {op: 'json_store', ts: new Date().toISOString() })
+  }
+
+  if (0) {
+    my_mqtt.obj_post(
+      'u8-mqtt-demo/obj/post',
+      {op: 'obj_post', ts: new Date().toISOString() })
+    my_mqtt.obj_send(
+      'u8-mqtt-demo/obj/send',
+      {op: 'obj_send', ts: new Date().toISOString() })
+    my_mqtt.obj_store(
+      'u8-mqtt-demo/obj/store',
+      {op: 'obj_store', ts: new Date().toISOString() })
+  }
 }
 
 

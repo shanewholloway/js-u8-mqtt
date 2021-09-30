@@ -1135,17 +1135,18 @@ class MQTTBaseClient {
 
 
   // alias: pub
-  publish(pkt) {return _pub(this, pkt)}
-  post(topic, payload) {return _pub(this, {qos:0, topic, payload})}
-  send(topic, payload) {return _pub(this, {qos:1, topic, payload})}
-  store(topic, payload) {return _pub(this, {qos:1, retain: 1, topic, payload})}
+  publish(pkt, encode) {return _pub(this, pkt, encode)}
+  post(topic, payload) {return _pub.m(this, topic, payload)}
+  send(topic, payload) {return _pub.mq(this, topic, payload)}
+  store(topic, payload) {return _pub.mqr(this, topic, payload)}
 
-  // alias: json_post
-  obj_post(topic, msg, encode) {return _pub(this, {qos:0, topic, msg, arg:'msg'}, encode)}
-  // alias: json_send
-  obj_send(topic, msg, encode) {return _pub(this, {qos:1, topic, msg, arg:'msg'}, encode)}
-  // alias: json_storek
-  obj_store(topic, msg, encode) {return _pub(this, {qos:1, retain: 1, msg, arg:'msg'}, encode)}
+  json_post(topic, msg) {return _pub.o(this, topic, msg)}
+  json_send(topic, msg) {return _pub.oq(this, topic, msg)}
+  json_store(topic, msg) {return _pub.oqr(this, topic, msg)}
+
+  obj_post(topic, msg, encode) {return _pub.o(this, topic, msg, encode)}
+  obj_send(topic, msg, encode) {return _pub.oq(this, topic, msg, encode)}
+  obj_store(topic, msg, encode) {return _pub.oqr(this, topic, msg, encode)}
 
 
 
@@ -1202,11 +1203,7 @@ class MQTTBaseClient {
     pub: p.publish
   , sub: p.subscribe
   , unsub: p.unsubscribe
-  , sub_topic: p.subscribe_topic
-
-  , json_post: p.obj_post
-  , json_send: p.obj_send
-  , json_store: p.obj_store} );
+  , sub_topic: p.subscribe_topic} );
 
   /*
     p.on_mqtt_type = {
@@ -1224,9 +1221,17 @@ class MQTTBaseClient {
   */}
 
 
+function _as_topics(pkt, ex) {
+  if ('string' === typeof pkt) {
+    return {topics:[pkt], ... ex}}
+  if (pkt[Symbol.iterator]) {
+    return {topics:[... pkt], ... ex}}
+  return ex ? {...pkt, ...ex} : pkt}
+
+
 function _pub(self, pkt, encode) {
-  let key, {qos, msg, payload} = pkt;
-  if (undefined === payload) {
+  if (undefined === pkt.payload) {
+    let {msg} = pkt;
     if (undefined === msg) {
       let arg = pkt.arg || 'payload';
       return v => _pub(self, {...pkt, [arg]: v}, encode)}
@@ -1235,15 +1240,24 @@ function _pub(self, pkt, encode) {
       ? encode(msg)
       : JSON.stringify(msg);}
 
-  if (1 === qos) key = pkt;
-  return self._send('publish', pkt, key)}
+  return self._send('publish', pkt,
+    pkt.qos ? pkt : void 0 ) }// key
 
-function _as_topics(pkt, ex) {
-  if ('string' === typeof pkt) {
-    return {topics:[pkt], ... ex}}
-  if (pkt[Symbol.iterator]) {
-    return {topics:[... pkt], ... ex}}
-  return ex ? {...pkt, ...ex} : pkt}
+ {
+  Object.assign(_pub,{
+    m: (self, topic, payload) =>
+      _pub(self, {topic, payload, qos:0})
+  , mq: (self, topic, payload) =>
+      _pub(self, {topic, payload, qos:1})
+  , mqr: (self, topic, payload) =>
+      _pub(self, {topic, payload, qos:1, retain: 1})
+
+  , o: (self, topic, msg, encode) =>
+      _pub(self, {topic, msg, arg: 'msg', qos:0}, encode)
+  , oq: (self, topic, msg, encode) =>
+      _pub(self, {topic, msg, arg: 'msg', qos:1}, encode)
+  , oqr: (self, topic, msg, encode) =>
+      _pub(self, {topic, msg, arg: 'msg', qos:1, retain: 1}, encode)} ); }
 
 class MQTTCoreClient extends MQTTBaseClient {
   static _with_session(mqtt_session) {

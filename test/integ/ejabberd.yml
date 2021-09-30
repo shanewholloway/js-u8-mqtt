@@ -1,0 +1,31 @@
+hosts:
+  - localhost
+
+auth_method: [anonymous]
+anonymous_protocol: login_anon
+
+listen:
+  -
+    port: 5280
+    ip: '::'
+    module: ejabberd_http
+    request_handlers:
+      '/mqtt': mod_mqtt
+  -
+    port: 1883
+    ip: '::'
+    module: mod_mqtt
+    backlog: 1000
+
+modules:
+  mod_http_api: {}
+  mod_mqtt:
+    access_publish:
+      "#":
+        - allow: all
+
+    access_subscribe:
+      "#":
+        - allow: all
+
+### vim: set filetype=yaml tabstop=8

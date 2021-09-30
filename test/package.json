@@ -3,5 +3,8 @@
   "version": "0.0.0",
   "dependencies": {},
   "devDependencies": {},
-  "scripts": { "test": "true" }
+  "scripts": {
+    "dkr_deps": "docker stack deploy -c integ/deps-deploy.yml integ_mqtt",
+    "test": "true"
+  }
 }

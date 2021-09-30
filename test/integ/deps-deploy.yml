@@ -1,0 +1,39 @@
+version: '3.7'
+networks:
+  default: 
+    attachable: true
+
+configs:
+  mosquitto_conf_v2:
+    file: ./mosquitto.conf
+
+  ejabberd_conf_v4:
+    file: ./ejabberd.yml
+
+services:
+  mosquitto_v16:
+    image: eclipse-mosquitto:1.6
+    configs:
+      - source: mosquitto_conf_v2
+        target: /mosquitto/config/mosquitto.conf
+    ports: 
+      - '9880:9880'
+      - '9883:9883'
+
+  mosquitto_v20:
+    image: eclipse-mosquitto:2.0
+    configs:
+      - source: mosquitto_conf_v2
+        target: /mosquitto/config/mosquitto.conf
+    ports: 
+      - '9890:9880'
+      - '9893:9883'
+
+  ejabberd:
+    image: ejabberd/ecs:21.04
+    configs:
+      - source: ejabberd_conf_v4
+        target: /home/ejabberd/conf/ejabberd.yml
+    ports:
+      - '5883:1883'
+      - '5880:5280'

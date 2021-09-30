@@ -1,7 +1,7 @@
 {
   "name": "u8-mqtt",
   "description": "MQTT client using Uint8Array -- suitable for use in the Browser, NodeJS, and Deno.land.",
-  "version": "0.0.23",
+  "version": "0.0.24",
   "license": "BSD-2-Clause",
   "author": "Shane Holloway <shane.holloway@ieee.org>",
   "homepage": "https://github.com/shanewholloway/js-u8-mqtt#readme",
@@ -48,6 +48,7 @@
     "prebuild": "test -d ./node_modules || npm -s ci",
     "build": "rollup --config",
     "watch": "rollup --config --watch",
+    "dkr_deps": "docker stack deploy -c test/integ/deps-deploy.yml integ_mqtt",
     "demo:node_v4": "node ./demo/node_v4.mjs",
     "demo:node_v5": "node ./demo/node_v5.mjs",
     "demo:deno_v4": "deno run --allow-net ./demo/deno_v4.mjs",
