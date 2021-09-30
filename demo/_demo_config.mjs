@@ -1,5 +1,5 @@
 const cfg_localhost = {
-  tcp: { port: 1883, host: '127.0.0.1'},
+  tcp: { port: 5883, host: '127.0.0.1'},
   websock_url: 'ws://127.0.0.1:9001',
 }
 

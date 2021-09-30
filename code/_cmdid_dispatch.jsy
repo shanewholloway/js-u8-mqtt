@@ -4,10 +4,10 @@ export const _mqtt_cmdid_dispatch = @{}
     return @{} __proto__: this, target, hashbelt: [new Map()]
 
   bind_pkt_future(_pkt_id=100) ::
-    const {hashbelt} = this
+    let {hashbelt} = this
 
     let _tmp_ // use _tmp_ to reuse _by_key closure
-    const _by_key = answer_monad =>
+    let _by_key = answer_monad =>
       hashbelt[0].set(_tmp_, answer_monad)
 
     return @\ pkt_or_key ::
@@ -20,8 +20,8 @@ export const _mqtt_cmdid_dispatch = @{}
       return new Promise(_by_key)
 
   answer(key, pkt) ::
-    for const map of this.hashbelt ::
-      const answer_monad = map.get(key)
+    for let map of this.hashbelt ::
+      let answer_monad = map.get(key)
       if undefined !== answer_monad ::
         map.delete(key)
 
@@ -30,10 +30,10 @@ export const _mqtt_cmdid_dispatch = @{}
     return false
 
   rotate_belt(n) ::
-    const {hashbelt} = this
+    let {hashbelt} = this
     hashbelt.unshift @ new Map()
-    for const old of hashbelt.splice(n || 5) ::
-      for const answer_monad of old.values() ::
+    for let old of hashbelt.splice(n || 5) ::
+      for let answer_monad of old.values() ::
         answer_monad([/*pkt*/, 'expired']) // option/maybe monad
 
   cmdids: @!
@@ -64,7 +64,7 @@ export const _mqtt_cmdid_dispatch = @{}
       by_evt(disp, pkt, ctx)
 
     async function by_evt({target}, pkt, ctx) ::
-      const fn = target[`mqtt_${pkt.type}`]
+      let fn = target[`mqtt_${pkt.type}`]
         || target.mqtt_pkt
 
       if undefined !== fn ::

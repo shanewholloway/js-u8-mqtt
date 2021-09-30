@@ -1,12 +1,12 @@
 export function _mqtt_conn(client, [on_mqtt, pkt_future]) ::
-  const q0 = _tiny_deferred_queue()
-  const q = _tiny_deferred_queue()
+  let q0 = _tiny_deferred_queue()
+  let q = _tiny_deferred_queue()
 
-  const _asy_send = async (...args) =>
+  let _asy_send = async (...args) =>
     (await q)(...args)
   let _send = client._send = _asy_send
 
-  const _ping = () => client._send('pingreq')
+  let _ping = () => client._send('pingreq')
   let tid_ping, _is_set = false
 
   return @{}
@@ -33,7 +33,7 @@ export function _mqtt_conn(client, [on_mqtt, pkt_future]) ::
         _send = await q0
 
       // await connack response
-      const res = await _send(...args)
+      let res = await _send(...args)
 
       client._send = _send
       q.notify(_send)
@@ -42,15 +42,15 @@ export function _mqtt_conn(client, [on_mqtt, pkt_future]) ::
     set(mqtt_session, send_u8_pkt) ::
       _is_set = true
 
-      const [mqtt_decode, mqtt_encode] = mqtt_session
+      let [mqtt_decode, mqtt_encode] = mqtt_session
 
-      const on_mqtt_chunk = u8_buf =>
+      let on_mqtt_chunk = u8_buf =>
         on_mqtt(
           mqtt_decode(u8_buf),
           {mqtt: client})
 
       _send = async (type, pkt, key) => ::
-        const res = undefined !== key
+        let res = undefined !== key
           ? pkt_future(key) : true
 
         await send_u8_pkt @
@@ -69,12 +69,15 @@ export function _mqtt_conn(client, [on_mqtt, pkt_future]) ::
 
 async function _async_evt(obj, evt) {
   // microtask break lookup
-  if (undefined !== evt)
+  if (undefined !== evt) {
     await evt.call(obj, await obj)
+  }
 }
 function _tiny_deferred_queue() {
-  const q = [] // tiny resetting deferred queue
+  let q = [] // tiny resetting deferred queue
   q.then = y => { q.push(y) }
-  q.notify = v => { for (const fn of q.splice(0,q.length)) fn(v) }
+  q.notify = v => {
+    for (let fn of q.splice(0,q.length))
+      fn(v) }
   return q
 }

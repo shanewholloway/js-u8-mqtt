@@ -21,16 +21,15 @@ import {
 } from 'u8-mqtt-packet'
 
 
-export default mqtt_session_ctx
 export function mqtt_session_ctx(mqtt_level) {
   let {ctx} = mqtt_session_ctx
   if (undefined === ctx ) {
-    const as_utf8 = u8 =>
+    let as_utf8 = u8 =>
       new TextDecoder('utf-8').decode(u8)
 
-    const std_pkt_api = {
+    let std_pkt_api = {
       utf8(u8) { return as_utf8( u8 || this.payload ) },
-      json(u8) { return JSON.parse( as_utf8( u8 || this.payload )) },
+      json(u8) { return JSON.parse( as_utf8( u8 || this.payload ) || null ) },
     }
 
     mqtt_session_ctx.ctx = ctx =

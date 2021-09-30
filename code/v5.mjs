@@ -1,7 +1,7 @@
-import mqtt_session_ctx from './session.mjs'
-import MQTTCore from './core.jsy'
+import {mqtt_session_ctx} from './session.mjs'
+import {MQTTCoreClient} from './core.jsy'
 
-class MQTTClient_v5 extends MQTTCore {
+class MQTTClient_v5 extends MQTTCoreClient {
   _mqtt_session() { return mqtt_session_ctx(5)() }
 }
 
