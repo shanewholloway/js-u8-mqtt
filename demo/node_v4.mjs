@@ -1,4 +1,4 @@
-import mqtt_client from '../esm/node/v4.mjs' // 'u8-mqtt/esm/node/v4.mjs'
+import mqtt_client from 'u8-mqtt/esm/node/v4.mjs'
 
 import {somewhere_in_your_code, goodbye} from './_demo_common.mjs'
 import demo_cfg from './_demo_config.mjs'
