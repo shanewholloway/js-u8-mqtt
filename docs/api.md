@@ -42,13 +42,13 @@ Please read [`_conn.jsy`](../code/_conn.jsy) for details.
 
  [u8-mqtt-packet]: https://github.com/shanewholloway/js-u8-mqtt-packet
 
-See [./pkt-publish.md](./pkt-publish.md) for documentation on sending packets.
+See [./pkt-pub.md](./pkt-pub.md) for documentation on sending packets.
 
 See [./pkt-router.md](./pkt-router.md) for documentation on packet routing and handlers.
 
-See [./pkt-subscribe.md](./pkt-subscribe.md) for documentation on subscribing and unsubscribing from topics, and packet routing handlers.
+See [./pkt-sub.md](./pkt-sub.md) for documentation on subscribing and unsubscribing from topics, and packet routing handlers.
 
-See [./pkt-handshaking.md](./pkt-handshaking.md) for documentation on `connect()`, `disconnect()`, `auth()`, and `ping()` methods.
+See [./pkt-conn.md](./pkt-conn.md) for documentation on `connect()`, `disconnect()`, `auth()`, and `ping()` methods.
 
 
 ### More client details
