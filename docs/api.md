@@ -40,8 +40,6 @@ Please read [`_conn.jsy`](../code/_conn.jsy) for details.
 
 ### Packets
 
- [u8-mqtt-packet]: https://github.com/shanewholloway/js-u8-mqtt-packet
-
 See [./pkt-pub.md](./pkt-pub.md) for documentation on sending packets.
 
 See [./pkt-router.md](./pkt-router.md) for documentation on packet routing and handlers.

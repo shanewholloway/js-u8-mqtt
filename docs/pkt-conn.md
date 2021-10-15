@@ -1,5 +1,8 @@
 #### Handshaking Packets
 
+ [u8-mqtt-packet]: https://github.com/shanewholloway/js-u8-mqtt-packet
+
+
 See [u8-mqtt-packet][] for MQTT packet encoding details
 
 
