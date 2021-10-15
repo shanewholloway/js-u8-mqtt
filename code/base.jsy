@@ -137,6 +137,7 @@ export class MQTTBaseClient ::
       mqtt_connack(pkt, ctx) ::
       mqtt_disconnect(pkt, ctx) ::
 
+      mqtt_publish(pkt, ctx)
       mqtt_subscribe(pkt, ctx) ::
       mqtt_unsubscribe(pkt, ctx) ::
 

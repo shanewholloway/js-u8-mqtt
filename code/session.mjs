@@ -2,6 +2,7 @@ import {
   _bind_mqtt_session_ctx,
 
   mqtt_decode_connack,
+  mqtt_decode_disconnect,
   mqtt_decode_publish,
   mqtt_decode_puback,
   mqtt_decode_pubxxx,
@@ -36,6 +37,7 @@ export function mqtt_session_ctx(mqtt_level) {
       _bind_mqtt_session_ctx(
         [ // lst_decode_ops
           mqtt_decode_connack,
+          mqtt_decode_disconnect,
           mqtt_decode_publish,
           mqtt_decode_puback,
           mqtt_decode_pubxxx,
