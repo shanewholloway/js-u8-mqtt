@@ -10,7 +10,7 @@
 
 ###### Routing and Handling Packets
 
-See [./pkt-router.md][] for documentation on packet routing and handlers.
+See [./pkt-router.md]() for documentation on packet routing and handlers.
 
 
 ##### Semantic packets methods
