@@ -47,7 +47,7 @@ See [./pkt-router.md](./pkt-router.md) for documentation on packet routing and h
 
   let my_store = mqtt.store(topic)
   // returns optimized closure over `topic`; e.g.
-  my_store = msg => mqtt.store(topic, msg)`
+  my_store = msg => mqtt.store(topic, msg)
 
   ```
 
@@ -86,7 +86,7 @@ See [./pkt-router.md](./pkt-router.md) for documentation on packet routing and h
 
   let my_json_store = mqtt.json_store(topic)
   // returns optimized closure over `topic`; e.g.
-  my_json_store = msg => mqtt.json_store(topic, msg)`
+  my_json_store = msg => mqtt.json_store(topic, msg)
 
   ```
 
@@ -128,7 +128,7 @@ See [cbor-codec](https://github.com/shanewholloway/js-cbor-codec).
 
   let my_obj_store = mqtt.obj_store(topic, fn_encode)
   // returns optimized closure over `topic` and `fn_encode`; e.g.
-  my_obj_store = msg => mqtt.obj_store(topic, msg, fn_encode)`
+  my_obj_store = msg => mqtt.obj_store(topic, msg, fn_encode)
 
   ```
 
