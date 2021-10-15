@@ -21,7 +21,7 @@ export class MQTTBaseClient ::
       pkt.keep_alive = 60
 
     let res = await this._conn_
-      .send_connect @ 'connect', pkt, 'connack'
+      .send_connect('connect', pkt, 'connack')
 
     // TODO: merge with server's keep_alive frequency
     this._conn_.ping(pkt.keep_alive)
@@ -57,7 +57,7 @@ export class MQTTBaseClient ::
 
 
   // alias: pub
-  publish(pkt, encode) :: return _pub(this, pkt, encode)
+  publish(pkt, fn_encode) :: return _pub(this, pkt, fn_encode)
   post(topic, payload) :: return _pub.m(this, topic, payload)
   send(topic, payload) :: return _pub.mq(this, topic, payload)
   store(topic, payload) :: return _pub.mqr(this, topic, payload)
@@ -66,9 +66,9 @@ export class MQTTBaseClient ::
   json_send(topic, msg) :: return _pub.oq(this, topic, msg)
   json_store(topic, msg) :: return _pub.oqr(this, topic, msg)
 
-  obj_post(topic, msg, encode) :: return _pub.o(this, topic, msg, encode)
-  obj_send(topic, msg, encode) :: return _pub.oq(this, topic, msg, encode)
-  obj_store(topic, msg, encode) :: return _pub.oqr(this, topic, msg, encode)
+  obj_post(topic, msg, fn_encode) :: return _pub.o(this, topic, msg, fn_encode)
+  obj_send(topic, msg, fn_encode) :: return _pub.oq(this, topic, msg, fn_encode)
+  obj_store(topic, msg, fn_encode) :: return _pub.oqr(this, topic, msg, fn_encode)
 
 
 
@@ -114,9 +114,12 @@ export class MQTTBaseClient ::
 
     let tgt = @{}
       __proto__: opt.on_mqtt_type || {}
-      mqtt_publish: router.invoke
+      router
 
-    return _mqtt_dispatch @ this, tgt
+    if ! tgt.mqtt_publish ::
+      tgt.mqtt_publish = router.invoke
+
+    return _mqtt_dispatch(this, tgt)
 
 
 ::
@@ -151,16 +154,22 @@ function _as_topics(pkt, ex) ::
   return ex ? {...pkt, ...ex} : pkt
 
 
-function _pub(self, pkt, encode) ::
+function _pub(self, pkt, fn_encode) ::
   if undefined === pkt.payload ::
     let {msg} = pkt
-    if undefined === msg ::
-      let arg = pkt.arg || 'payload'
-      return v => _pub(self, {...pkt, [arg]: v}, encode)
+    switch typeof msg ::
+      case 'function':
+        fn_encode = msg
+        msg = undefined
 
-    pkt.payload = encode
-      ? encode(msg)
-      : JSON.stringify(msg)
+      case 'undefined':
+        let arg = pkt.arg || 'payload'
+        return v => _pub(self, {...pkt, [arg]: v}, fn_encode)
+
+      default:
+        pkt.payload = fn_encode
+          ? fn_encode(msg)
+          : JSON.stringify(msg)
 
   return self._send @ 'publish', pkt,
     pkt.qos ? pkt : void 0 // key
@@ -174,10 +183,10 @@ function _pub(self, pkt, encode) ::
     mqr: (self, topic, payload) =>
       _pub(self, {topic, payload, qos:1, retain: 1})
 
-    o: (self, topic, msg, encode) =>
-      _pub(self, {topic, msg, arg: 'msg', qos:0}, encode)
-    oq: (self, topic, msg, encode) =>
-      _pub(self, {topic, msg, arg: 'msg', qos:1}, encode)
-    oqr: (self, topic, msg, encode) =>
-      _pub(self, {topic, msg, arg: 'msg', qos:1, retain: 1}, encode)
+    o: (self, topic, msg, fn_encode) =>
+      _pub(self, {topic, msg, arg: 'msg', qos:0}, fn_encode)
+    oq: (self, topic, msg, fn_encode) =>
+      _pub(self, {topic, msg, arg: 'msg', qos:1}, fn_encode)
+    oqr: (self, topic, msg, fn_encode) =>
+      _pub(self, {topic, msg, arg: 'msg', qos:1, retain: 1}, fn_encode)
 
