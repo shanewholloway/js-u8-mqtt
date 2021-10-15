@@ -13,7 +13,7 @@ If the `opt.on_reconnect(mqtt)` closure is provided, `mqtt.with_reconnect(opt.on
 
 If the `opt.on_mqtt_type` object is provided, `mqtt._init_dispatch(opt)` uses it for packet dispatching.
 By default, `mqtt_publish` directs the packet to `mqtt.router` for dispatching.
-See [./client-more.md]() for more documentation, and [`base.jsy`](../code/base.jsy) for details.
+See [./client-more.md](./client-more.md) for more documentation, and [`base.jsy`](../code/base.jsy) for details.
 
 Packets are decoded via the internal `mqtt._conn_` and the bound `mqtt._mqtt_session` objects.
 Please read [`_conn.jsy`](../code/_conn.jsy) for details.
@@ -42,16 +42,16 @@ Please read [`_conn.jsy`](../code/_conn.jsy) for details.
 
  [u8-mqtt-packet]: https://github.com/shanewholloway/js-u8-mqtt-packet
 
-See [./pkt-publish.md]() for documentation on sending packets.
+See [./pkt-publish.md](./pkt-publish.md) for documentation on sending packets.
 
-See [./pkt-router.md]() for documentation on packet routing and handlers.
+See [./pkt-router.md](./pkt-router.md) for documentation on packet routing and handlers.
 
-See [./pkt-subscribe.md]() for documentation on subscribing and unsubscribing from topics, and packet routing handlers.
+See [./pkt-subscribe.md](./pkt-subscribe.md) for documentation on subscribing and unsubscribing from topics, and packet routing handlers.
 
-See [./pkt-handshaking.md]() for documentation on `connect()`, `disconnect()`, `auth()`, and `ping()` methods.
+See [./pkt-handshaking.md](./pkt-handshaking.md) for documentation on `connect()`, `disconnect()`, `auth()`, and `ping()` methods.
 
 
 ### More client details
 
-See [./client-more.md]() for more information on utility, advanced, extension, and internal APIs.
+See [./client-more.md](./client-more.md) for more information on utility, advanced, extension, and internal APIs.
 
