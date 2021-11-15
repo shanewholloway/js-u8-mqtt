@@ -1,7 +1,7 @@
 import mqtt_client from '../esm/web/v4.mjs'
 
-import {somewhere_in_your_code, goodbye} from './_demo_common.mjs'
-import demo_cfg from './_demo_config.mjs'
+import {somewhere_in_your_code, goodbye} from './support_common.mjs'
+import demo_cfg from './support_config.mjs'
 
 
 console.log('in web_v4.mjs')

@@ -1,7 +1,7 @@
-import mqtt_client from 'u8-mqtt/esm/deno/v4.mjs'
+import mqtt_client from '../esm/deno/v4.mjs'
 
-import {somewhere_in_your_code, goodbye} from './_demo_common.mjs'
-import demo_cfg from './_demo_config.mjs'
+import {somewhere_in_your_code, goodbye} from './support_common.mjs'
+import demo_cfg from './support_config.mjs'
 
 
 const my_mqtt = mqtt_client({on_live})
