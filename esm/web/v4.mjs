@@ -982,9 +982,20 @@ function _mqtt_topic_router() {
       let rte = parse(
         topic_route.replace(/[+#]$/, '*'));
 
+      rte.key = topic_route;
       rte.tgt = fn;
       pri_lsts[priority ? 0 : 1].push(rte);
       return this}
+
+  , remove(topic_route, priority) {
+      let lst = pri_lsts[priority ? 0 : 1];
+      lst = lst.filter(e => e.key !== topic_route);
+      pri_lsts[priority ? 0 : 1] = lst;}
+
+  , clear(priority) {
+      pri_lsts[priority ? 0 : 1] = [];
+      if (null == priority) {
+        pri_lsts[1] = [];} }
 
   , async invoke(pkt, ctx) {
       ctx.idx = 0;
@@ -1171,12 +1182,23 @@ class MQTTBaseClient {
     pkt = _as_topics(pkt, ex);
     return this._send('unsubscribe', pkt, pkt)}
 
+  get on_topic() {return this.router.add}
+
   // alias: sub_topic
   subscribe_topic(topic_route, ...args) {
-    let topic = topic_route.replace(/[:*].*$/, '#');
-    this.on_topic(topic_route, true, args.pop() );// handler
+    let topic = this.topic_for(topic_route);
+    this.router.add(topic_route, true, args.pop() );// handler
     this.subscribe([[ topic ]], args.pop() );// ex
     return this}
+
+  // alias: unsub_topic
+  unsubscribe_topic(topic_route) {
+    let topic = this.topic_for(topic_route);
+    this.router.remove(topic_route, true);
+    return this.unsubscribe([[ topic ]]) }
+
+  topic_for(topic_route) {
+    return topic_route.replace(/[:*].*$/, '#')}
 
 
   // alias: pub
@@ -1228,9 +1250,7 @@ class MQTTBaseClient {
   /* async _send(type, pkt) -- provided by _conn_ and transport */
 
   _init_router(opt) {
-    let router = _mqtt_topic_router();
-    this.on_topic = router.add;
-    return this.router = router}
+    return this.router = _mqtt_topic_router()}
 
   _init_dispatch(opt) {
     let router = this._init_router(opt, this);
@@ -1251,7 +1271,8 @@ class MQTTBaseClient {
     pub: p.publish
   , sub: p.subscribe
   , unsub: p.unsubscribe
-  , sub_topic: p.subscribe_topic} );
+  , sub_topic: p.subscribe_topic
+  , unsub_topic: p.unsubscribe_topic} );
 
   /*
     p.on_mqtt_type = {
