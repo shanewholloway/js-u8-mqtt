@@ -23,9 +23,20 @@ export function _mqtt_topic_router() ::
       let rte = _rxp_parse @
         topic_route.replace(/[+#]$/, '*')
 
+      rte.key = topic_route
       rte.tgt = fn
       pri_lsts[priority ? 0 : 1].push(rte)
       return this
+
+    remove(topic_route, priority) ::
+      let lst = pri_lsts[priority ? 0 : 1]
+      lst = lst.filter @ e => e.key !== topic_route
+      pri_lsts[priority ? 0 : 1] = lst
+
+    clear(priority) ::
+      pri_lsts[priority ? 0 : 1] = []
+      if null == priority ::
+        pri_lsts[1] = []
 
     async invoke(pkt, ctx) ::
       ctx.idx = 0
