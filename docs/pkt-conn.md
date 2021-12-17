@@ -24,6 +24,8 @@ See [u8-mqtt-packet][] for MQTT packet encoding details
 
   See [`u8-mqtt-packet/docs/mqtt_codec_auth.md`](https://github.com/shanewholloway/js-u8-mqtt-packet/blob/master/docs/mqtt_codec_auth.md) for MQTT packet encoding details
 
+  For default `{username, password}` authentication methods use `mqtt.connect({username, password})`.
+
 * `mqtt.ping()` -- Encode and send an MQTT pingreq packet. Returns a promise that is resolved after a `pingresp` packet is received. 
 
   Note that `mqtt.connect` automatically pings the MQTT server based on `keep_alive` setting.
