@@ -11,7 +11,7 @@ const _rpis_ = (defines, ...args) => [
   rpi_dgnotify()]
 
 const _cfg_ = {
-  external: id => /^node:/.test(id) || builtinModules.includes(id),
+  external: id => /^\w*:/.test(id) || builtinModules.includes(id),
   plugins: _rpis_({}) }
 
 const cfg_nodejs = { ..._cfg_,
