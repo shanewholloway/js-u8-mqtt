@@ -50,10 +50,10 @@ export class MQTTCoreClient extends MQTTBaseClient ::
   #IF PLAT_DENO
     with_tcp(port, hostname) ::
       if !Number.isFinite(port) ::
-        ({port, host: hostname} = port)
+        ({port, hostname} = new URL(port))
 
       Deno.connect @:
-        port: port || 1883, hostname, transport: 'tcp'
+        port, hostname, transport: 'tcp'
       .then @\ conn =>
         this.with_async_iter @
           Deno.iter(conn),
@@ -65,7 +65,7 @@ export class MQTTCoreClient extends MQTTBaseClient ::
   #IF PLAT_NODEJS
     with_tcp(port, hostname) ::
       if !Number.isFinite(port) ::
-        ({port, host: hostname} = port)
+        ({port, hostname} = new URL(port))
 
       let sock = tcp_connect(port, hostname)
       return this.with_stream(sock)
