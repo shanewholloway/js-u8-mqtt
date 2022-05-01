@@ -62,7 +62,10 @@ export function * _mqtt_routes_iter(all_route_lists, topic) ::
 
 
 export function _mqtt_route_match_one(topic, {keys, pattern, tgt}) ::
-  let match = pattern.exec('/'+topic)
+  let match = '/' !== topic[0]
+    ? pattern.exec('/'+topic)
+    : pattern.exec(topic)
+
   if null === match ::
     return
 
