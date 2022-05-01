@@ -817,7 +817,8 @@ function mqtt_session_ctx(mqtt_level) {
 
     let std_pkt_api = {
       utf8(u8) { return as_utf8( u8 || this.payload ) },
-      json(u8) { return JSON.parse( as_utf8( u8 || this.payload ) || null ) },
+      json(u8) { return JSON.parse( this.utf8(u8) || null ) },
+      text(u8) { return this.utf8(u8) },
     };
 
     mqtt_session_ctx.ctx = ctx =
@@ -1021,7 +1022,10 @@ function * _mqtt_routes_iter(all_route_lists, topic) {
 
 
 function _mqtt_route_match_one(topic, {keys, pattern, tgt}) {
-  let match = pattern.exec('/'+topic);
+  let match = '/' !== topic[0]
+    ? pattern.exec('/'+topic)
+    : pattern.exec(topic);
+
   if (null === match) {
     return}
 
@@ -1381,10 +1385,10 @@ class MQTTCoreClient extends MQTTBaseClient {
   
   with_tcp(port, hostname) {
     if (!Number.isFinite(port)) {
-      ({port, host: hostname} = port);}
+      ({port, hostname} = new URL(port));}
 
     Deno.connect({
-      port: port || 1883, hostname, transport: 'tcp'})
+      port, hostname, transport: 'tcp'})
     .then (( conn ) =>
       this.with_async_iter(
         Deno.iter(conn),
