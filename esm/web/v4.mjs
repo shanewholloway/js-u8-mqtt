@@ -1303,7 +1303,7 @@ function _as_topics(pkt, ex) {
   return ex ? {...pkt, ...ex} : pkt}
 
 
-function _pub(self, pkt, fn_encode) {
+async function _pub(self, pkt, fn_encode) {
   if (undefined === pkt.payload) {
     let {msg} = pkt;
     switch (typeof msg) {
@@ -1317,7 +1317,7 @@ function _pub(self, pkt, fn_encode) {
 
       default:
         pkt.payload = fn_encode
-          ? fn_encode(msg)
+          ? await fn_encode(msg)
           : JSON.stringify(msg);} }
 
   return self._send('publish', pkt,

@@ -1,7 +1,7 @@
 {
   "name": "u8-mqtt",
   "description": "MQTT client using Uint8Array -- suitable for use in the Browser, NodeJS, and Deno.land.",
-  "version": "0.0.28",
+  "version": "0.1.0",
   "license": "BSD-2-Clause",
   "author": "Shane Holloway <shane.holloway@ieee.org>",
   "homepage": "https://github.com/shanewholloway/js-u8-mqtt#readme",
@@ -19,12 +19,12 @@
   ],
   "type": "module",
   "main": "./cjs/index.cjs",
-  "module": "./esm/node/index.mjs",
+  "module": "./esm/node/index.js",
   "exports": {
     "./esm/*": "./esm/*",
     "./cjs/*": "./cjs/*",
     ".": {
-      "import": "./esm/node/index.mjs",
+      "import": "./esm/node/index.js",
       "require": "./cjs/index.cjs"
     }
   },
@@ -33,7 +33,7 @@
     "test"
   ],
   "devDependencies": {
-    "@rollup/plugin-node-resolve": "^13.2.1",
+    "@rollup/plugin-node-resolve": "^13.3.0",
     "qsrv": "^0.2.3",
     "regexparam": "^2.0.0",
     "rollup": "^2.71.1",

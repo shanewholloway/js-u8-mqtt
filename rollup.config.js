@@ -42,15 +42,23 @@ function * add_jsy(src_name, opt={}) {
   if (cfg_nodejs)
     yield ({ ... cfg_nodejs, input, output: [
       { ... _out_, file: `cjs/${src_name}.cjs`, format: 'cjs', exports:opt.exports || 'named' },
-      { ... _out_, file: `esm/node/${src_name}.mjs`, format: 'es' } ]})
+      { ... _out_, file: `esm/node/${src_name}.js`, format: 'es' },
+      { ... _out_, file: `esm/node/${src_name}.mjs`, format: 'es' },
+    ]})
 
   if (cfg_deno)
     yield ({ ... cfg_deno, input,
-      output: { ... _out_, file: `esm/deno/${src_name}.mjs`, format: 'es' }})
+      output: [
+        { ... _out_, file: `esm/deno/${src_name}.js`, format: 'es' },
+        { ... _out_, file: `esm/deno/${src_name}.mjs`, format: 'es' },
+      ]})
 
   if (cfg_web)
     yield ({ ... cfg_web, input,
-      output: { ... _out_, file: `esm/web/${src_name}.mjs`, format: 'es' }})
+      output: [
+        { ... _out_, file: `esm/web/${src_name}.js`, format: 'es' },
+        { ... _out_, file: `esm/web/${src_name}.mjs`, format: 'es' },
+      ]})
 
   if ('undefined' !== typeof cfg_web_min)
     yield ({ ... cfg_web_min, input,
