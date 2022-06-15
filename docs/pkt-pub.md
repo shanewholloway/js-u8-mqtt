@@ -1,12 +1,18 @@
 #### Publish Packets
 
 
-* `mqtt.publish(pkt[, fn_encode])` -- Encode and send an MQTT publish packet. If `qos:1`, also handles `puback` protocol.
-  * `mqtt.pub(pkt[, fn_encode])` -- alias for `mqtt.publish(pkt[, fn_encode])`
+* `mqtt.publish(pkt[, pub_opt])` -- Encode and send an MQTT publish packet. If `qos:1`, also handles `puback` protocol.
+  * `mqtt.pub(pkt[, pub_opt])` -- alias for `mqtt.publish(pkt[, pub_opt])`
 
   Returns a `Promise<[puback pkt, error]>` in the style of an [Option / Maybe monad](https://en.wikipedia.org/wiki/Option_type).
 
   See [`u8-mqtt-packet/docs/mqtt_codec_publish.md`](https://github.com/shanewholloway/js-u8-mqtt-packet/blob/master/docs/mqtt_codec_publish.md) for MQTT packet encoding details
+
+  The `pub_opt` optional parameter provides additional detail to `pkt`. 
+  - If `pub_opt` is a function, it is an alias for `pub_opt.fn_encode`.
+  - `pub_opt.fn_encode(msg)` to use an alternate encoding to `JSON.stringify(msg)`
+  - `pub_opt.props` are copied over `pkt.props`, if present.
+  - `pub_opt.xform` is called before publishing `pkt = xform(pkt)`, if present.
 
 ###### Routing and Handling Packets
 
@@ -15,22 +21,22 @@ See [./pkt-router.md](./pkt-router.md) for documentation on packet routing and h
 
 ##### Semantic packets methods
 
-* `mqtt.post(topic, payload)` -- alias for
+* `mqtt.post(topic, payload, pub_opt)` -- alias for
 
     ```javascript
-    mqtt.publish({qos: 0, topic, payload})
+    mqtt.publish({qos: 0, topic, payload}, pub_opt)
     ```
 
-* `mqtt.send(topic, payload)` -- alias for
+* `mqtt.send(topic, payload, pub_opt)` -- alias for
 
     ```javascript
-    mqtt.publish({qos: 1, topic, payload})
+    mqtt.publish({qos: 1, topic, payload}, pub_opt)
     ```
 
-* `mqtt.store(topic, payload)` -- alias for
+* `mqtt.store(topic, payload, pub_opt)` -- alias for
 
     ```javascript
-    mqtt.publish({qos: 1, retain: true, topic, payload})
+    mqtt.publish({qos: 1, retain: true, topic, payload}, pub_opt)
     ```
 
 * Returns closures without `msg` argument
@@ -54,22 +60,22 @@ See [./pkt-router.md](./pkt-router.md) for documentation on packet routing and h
 
 ##### JSON Encoded packet methods
 
-* `mqtt.json_post(topic, msg)` -- alias for
+* `mqtt.json_post(topic, msg, pub_opt)` -- alias for
 
     ```javascript
-    mqtt.publish({qos: 0, topic, payload: JSON.stringify(msg))
+    mqtt.publish({qos: 0, topic, payload: JSON.stringify(msg)}, pub_opt)
     ```
 
-* `mqtt.json_send(topic, msg)` -- alias for
+* `mqtt.json_send(topic, msg, pub_opt)` -- alias for
 
     ```javascript
-    mqtt.publish({qos: 1, topic, payload: JSON.stringify(msg))
+    mqtt.publish({qos: 1, topic, payload: JSON.stringify(msg)}, pub_opt)
     ```
 
-* `mqtt.json_store(topic, msg)` -- alias for
+* `mqtt.json_store(topic, msg, pub_opt)` -- alias for
 
     ```javascript
-    mqtt.publish({qos: 1, retain:true, topic, payload: JSON.stringify(msg))
+    mqtt.publish({qos: 1, retain:true, topic, payload: JSON.stringify(msg)}, pub_opt)
     ```
 
 * Returns closures without `msg` argument
@@ -99,19 +105,19 @@ See [cbor-codec](https://github.com/shanewholloway/js-cbor-codec).
 * `mqtt.obj_post(topic, msg, fn_encode)` -- alias for
 
     ```javascript
-    mqtt.publish({qos: 0, topic, payload: JSON.stringify(msg))
+    mqtt.publish({qos: 0, topic, payload: fn_encode(msg)}, {fn_encode})
     ```
 
 * `mqtt.obj_send(topic, msg, fn_encode)` -- alias for
 
     ```javascript
-    mqtt.publish({qos: 1, topic, payload: JSON.stringify(msg))
+    mqtt.publish({qos: 1, topic, payload: fn_encode(msg), {fn_encode})
     ```
 
 * `mqtt.obj_store(topic, msg, fn_encode)` -- alias for
 
     ```javascript
-    mqtt.publish({qos: 1, retain:true, topic, payload: JSON.stringify(msg))`
+    mqtt.publish({qos: 1, retain:true, topic, payload: fn_encode(msg), {fn_encode})`
     ```
 
 * Returns closures without `msg` argument

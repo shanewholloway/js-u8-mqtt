@@ -22,4 +22,6 @@ export const cfg_test_mosquitto_org = {
 }
 
 //export default cfg_test_mosquitto_org
-export default cfg_integ.mosquitto_v16
+//export default cfg_integ.mosquitto_v16
+export default cfg_integ.mosquitto_v20
+//export default cfg_integ.ejabberd
