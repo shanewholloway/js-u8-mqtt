@@ -2,7 +2,7 @@ import rpi_jsy from 'rollup-plugin-jsy'
 import rpi_dgnotify from 'rollup-plugin-dgnotify'
 import rpi_resolve from '@rollup/plugin-node-resolve'
 import { terser as rpi_terser } from 'rollup-plugin-terser'
-import {builtinModules} from 'module'
+import { builtinModules } from 'module'
 
 const _rpis_ = (defines, ...args) => [
   rpi_jsy({defines}),
@@ -23,7 +23,8 @@ const cfg_deno = { ..._cfg_,
 const cfg_web = { ..._cfg_,
   plugins: _rpis_({PLAT_WEB: true}) }
 
-const cfg_web_min = { ... cfg_web,
+let is_watch = process.argv.includes('--watch')
+const cfg_web_min = is_watch ? null : { ... cfg_web,
   plugins: _rpis_({PLAT_WEB: true}, rpi_terser()) }
 
 const _out_ = { sourcemap: true }
@@ -60,7 +61,7 @@ function * add_jsy(src_name, opt={}) {
         { ... _out_, file: `esm/web/${src_name}.mjs`, format: 'es' },
       ]})
 
-  if ('undefined' !== typeof cfg_web_min)
+  if (cfg_web_min)
     yield ({ ... cfg_web_min, input,
       output: { ... _out_, file: `esm/web/${src_name}.min.mjs`, format: 'es', sourcemap: false }})
 }

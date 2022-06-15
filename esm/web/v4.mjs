@@ -1201,23 +1201,36 @@ class MQTTBaseClient {
     this.router.remove(topic_route, true);
     return this.unsubscribe([[ topic ]]) }
 
+  // alias: shared_sub
+  shared_subscribe(group, topic_route, ...args) {
+    let topic = `$share/${group||''}/${this.topic_for(topic_route)}`;
+    this.router.add(topic_route, true, args.pop() );// handler
+    this.subscribe([[ topic ]], args.pop() );// ex
+    return this}
+
+  // alias: shared_unsub
+  shared_unsubscribe(group, topic_route) {
+    let topic = `$share/${group||''}/${this.topic_for(topic_route)}`;
+    this.router.remove(topic_route, true);
+    return this.unsubscribe([[ topic ]]) }
+
   topic_for(topic_route) {
     return topic_route.replace(/[:*].*$/, '#')}
 
 
   // alias: pub
-  publish(pkt, fn_encode) {return _pub(this, pkt, fn_encode)}
-  post(topic, payload) {return _pub.m(this, topic, payload)}
-  send(topic, payload) {return _pub.mq(this, topic, payload)}
-  store(topic, payload) {return _pub.mqr(this, topic, payload)}
+  publish(pkt, pub_opt) {return _pub(this, pkt, pub_opt)}
+  post(topic, payload, pub_opt) {return _pub.m(this, topic, payload, pub_opt)}
+  send(topic, payload, pub_opt) {return _pub.mq(this, topic, payload, pub_opt)}
+  store(topic, payload, pub_opt) {return _pub.mqr(this, topic, payload, pub_opt)}
 
-  json_post(topic, msg) {return _pub.o(this, topic, msg)}
-  json_send(topic, msg) {return _pub.oq(this, topic, msg)}
-  json_store(topic, msg) {return _pub.oqr(this, topic, msg)}
+  json_post(topic, msg, pub_opt) {return _pub.o(this, topic, msg, pub_opt)}
+  json_send(topic, msg, pub_opt) {return _pub.oq(this, topic, msg, pub_opt)}
+  json_store(topic, msg, pub_opt) {return _pub.oqr(this, topic, msg, pub_opt)}
 
-  obj_post(topic, msg, fn_encode) {return _pub.o(this, topic, msg, fn_encode)}
-  obj_send(topic, msg, fn_encode) {return _pub.oq(this, topic, msg, fn_encode)}
-  obj_store(topic, msg, fn_encode) {return _pub.oqr(this, topic, msg, fn_encode)}
+  obj_post(topic, msg, pub_opt) {return _pub.o(this, topic, msg, pub_opt)}
+  obj_send(topic, msg, pub_opt) {return _pub.oq(this, topic, msg, pub_opt)}
+  obj_store(topic, msg, pub_opt) {return _pub.oqr(this, topic, msg, pub_opt)}
 
 
 
@@ -1276,7 +1289,9 @@ class MQTTBaseClient {
   , sub: p.subscribe
   , unsub: p.unsubscribe
   , sub_topic: p.subscribe_topic
-  , unsub_topic: p.unsubscribe_topic} );
+  , unsub_topic: p.unsubscribe_topic
+  , shared_sub: p.shared_subscribe
+  , shared_unsub: p.shared_unsubscribe} );
 
   /*
     p.on_mqtt_type = {
@@ -1303,41 +1318,52 @@ function _as_topics(pkt, ex) {
   return ex ? {...pkt, ...ex} : pkt}
 
 
-async function _pub(self, pkt, fn_encode) {
+async function _pub(self, pkt, pub_opt) {
   if (undefined === pkt.payload) {
+    if ('function' === typeof pub_opt) {
+      pub_opt = {fn_encode: pub_opt};}
+
     let {msg} = pkt;
     switch (typeof msg) {
       case 'function':
-        fn_encode = msg;
-        msg = undefined;
-
+        pub_opt = {...pub_opt, fn_encode: msg};
+        // flow into 'undefined' case
       case 'undefined':
-        let arg = pkt.arg || 'payload';
-        return v => _pub(self, {...pkt, [arg]: v}, fn_encode)
+        // return a single-value closure to publish packets
+        return v => _pub(self, {...pkt, [pkt.arg || 'payload']: v}, pub_opt)
 
       default:
+        // Encode payload from msg; fn_encode allows alternative to JSON.stringify
+        let fn_encode = pub_opt || {};
         pkt.payload = fn_encode
           ? await fn_encode(msg)
           : JSON.stringify(msg);} }
+
+  if (pub_opt) {
+    let {props, xform} = pub_opt;
+    if (props) {
+      pkt.props = props;}
+    if (xform) {
+      pkt = xform(pkt) || pkt;} }
 
   return self._send('publish', pkt,
     pkt.qos ? pkt : void 0 ) }// key
 
  {
   Object.assign(_pub,{
-    m: (self, topic, payload) =>
-      _pub(self, {topic, payload, qos:0})
-  , mq: (self, topic, payload) =>
-      _pub(self, {topic, payload, qos:1})
-  , mqr: (self, topic, payload) =>
-      _pub(self, {topic, payload, qos:1, retain: 1})
+    m: (self, topic, payload, pub_opt) =>
+      _pub(self, {topic, payload, qos:0}, pub_opt)
+  , mq: (self, topic, payload, pub_opt) =>
+      _pub(self, {topic, payload, qos:1}, pub_opt)
+  , mqr: (self, topic, payload, pub_opt) =>
+      _pub(self, {topic, payload, qos:1, retain: 1}, pub_opt)
 
-  , o: (self, topic, msg, fn_encode) =>
-      _pub(self, {topic, msg, arg: 'msg', qos:0}, fn_encode)
-  , oq: (self, topic, msg, fn_encode) =>
-      _pub(self, {topic, msg, arg: 'msg', qos:1}, fn_encode)
-  , oqr: (self, topic, msg, fn_encode) =>
-      _pub(self, {topic, msg, arg: 'msg', qos:1, retain: 1}, fn_encode)} ); }
+  , o: (self, topic, msg, pub_opt) =>
+      _pub(self, {topic, msg, arg: 'msg', qos:0}, pub_opt)
+  , oq: (self, topic, msg, pub_opt) =>
+      _pub(self, {topic, msg, arg: 'msg', qos:1}, pub_opt)
+  , oqr: (self, topic, msg, pub_opt) =>
+      _pub(self, {topic, msg, arg: 'msg', qos:1, retain: 1}, pub_opt)} ); }
 
 class MQTTCoreClient extends MQTTBaseClient {
   static _with_session(mqtt_session) {
