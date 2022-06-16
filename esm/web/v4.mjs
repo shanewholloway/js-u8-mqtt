@@ -1180,6 +1180,10 @@ class MQTTBaseClient {
   subscribe(pkt, ex) {
     pkt = _as_topics(pkt, ex);
     return this._send('subscribe', pkt, pkt)}
+  _sub_chain(topic, ex) {
+    let subs = this.subs ||(this.subs = new Map());
+    subs.set(topic, this.subscribe([[ topic ]], ex));
+    return this }// fluent api -- return this and track side effects
 
   // alias: unsub
   unsubscribe(pkt, ex) {
@@ -1190,28 +1194,30 @@ class MQTTBaseClient {
 
   // alias: sub_topic
   subscribe_topic(topic_route, ...args) {
-    let topic = this.topic_for(topic_route);
     this.router.add(topic_route, true, args.pop() );// handler
-    this.subscribe([[ topic ]], args.pop() );// ex
-    return this}
+    let topic = this.topic_for(topic_route);
+    return this._sub_chain(topic, args.pop() ) }// ex
 
   // alias: unsub_topic
   unsubscribe_topic(topic_route) {
-    let topic = this.topic_for(topic_route);
     this.router.remove(topic_route, true);
+    let topic = this.topic_for(topic_route);
     return this.unsubscribe([[ topic ]]) }
 
   // alias: shared_sub
   shared_subscribe(group, topic_route, ...args) {
-    let topic = `$share/${group||''}/${this.topic_for(topic_route)}`;
     this.router.add(topic_route, true, args.pop() );// handler
-    this.subscribe([[ topic ]], args.pop() );// ex
-    return this}
+    let topic = this.topic_for(topic_route);
+    if (null != group) {
+      topic = `$share/${group}/${topic}`;}
+    return this._sub_chain(topic, args.pop() ) }// ex
 
   // alias: shared_unsub
   shared_unsubscribe(group, topic_route) {
-    let topic = `$share/${group||''}/${this.topic_for(topic_route)}`;
     this.router.remove(topic_route, true);
+    let topic = this.topic_for(topic_route);
+    if (null != group) {
+      topic = `$share/${group}/${topic}`;}
     return this.unsubscribe([[ topic ]]) }
 
   topic_for(topic_route) {
@@ -1334,17 +1340,16 @@ async function _pub(self, pkt, pub_opt) {
 
       default:
         // Encode payload from msg; fn_encode allows alternative to JSON.stringify
-        let fn_encode = pub_opt || {};
+        let {fn_encode} = pub_opt || {};
         pkt.payload = fn_encode
           ? await fn_encode(msg)
           : JSON.stringify(msg);} }
 
   if (pub_opt) {
-    let {props, xform} = pub_opt;
-    if (props) {
+    if (pub_opt.props) {
       pkt.props = props;}
-    if (xform) {
-      pkt = xform(pkt) || pkt;} }
+    if (pub_opt.xform) {
+      pkt = pub_opt.xform(pkt) || pkt;} }
 
   return self._send('publish', pkt,
     pkt.qos ? pkt : void 0 ) }// key
