@@ -209,7 +209,7 @@ async function _pub(self, pkt, pub_opt) ::
 
   if pub_opt ::
     if pub_opt.props ::
-      pkt.props = props
+      pkt.props = pub_opt.props
     if pub_opt.xform ::
       pkt = pub_opt.xform(pkt) || pkt
 
