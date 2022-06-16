@@ -43,8 +43,9 @@ export class MQTTBaseClient ::
     pkt = _as_topics(pkt, ex)
     return this._send('subscribe', pkt, pkt)
   _sub_chain(topic, ex) ::
+    let res = this.subscribe @ [[ topic ]], ex
     let subs = this.subs || @ this.subs = new Map()
-    subs.set @ topic, this.subscribe @ [[ topic ]], ex
+    subs.set @ (res.topic = topic), (subs.last = res)
     return this // fluent api -- return this and track side effects
 
   // alias: unsub
