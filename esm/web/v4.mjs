@@ -966,7 +966,7 @@ function parse(str, loose) {
 function _ignore(pkt, params, ctx) {ctx.done = true;}
 
 function _mqtt_topic_router() {
-  let pri_lsts = [[],[]];
+  let pri_lsts = [[],[]], rm = Symbol();
   let find = topic => _mqtt_routes_iter(pri_lsts, topic);
 
   return {find,
@@ -990,8 +990,7 @@ function _mqtt_topic_router() {
 
   , remove(topic_route, priority) {
       let lst = pri_lsts[priority ? 0 : 1];
-      lst = lst.filter(e => e.key !== topic_route);
-      pri_lsts[priority ? 0 : 1] = lst;}
+      return _mqtt_route_remove([lst], topic_route)}
 
   , clear(priority) {
       pri_lsts[priority ? 0 : 1] = [];
@@ -1000,9 +999,13 @@ function _mqtt_topic_router() {
 
   , async invoke(pkt, ctx) {
       ctx.idx = 0;
+      ctx.rm = rm;
 
       for (let [fn, params] of find(pkt.topic)) {
-        await fn(pkt, params, ctx);
+        let res = await fn(pkt, params, ctx);
+
+        if (rm === res) {
+          _mqtt_route_remove(pri_lsts, fn);}
 
         if (ctx.done) {
           break}
@@ -1047,6 +1050,14 @@ function _mqtt_route_match_one(topic, {keys, pattern, tgt}) {
   for (let i=0; i<keys.length; i++) {
     params[ keys[i] ] = match[1+i];}
   return [tgt, params]}
+
+
+function _mqtt_route_remove(all_route_lists, query) {
+  let match = route => route===query || route.tgt===query || route.key===query;
+  for (let lst of all_route_lists) {
+    let i = lst.findIndex(match);
+    if (0 <= i) {return !! lst.splice(i,1)} }
+  return false}
 
 const _mqtt_cmdid_dispatch ={
   create(target) {
@@ -1181,8 +1192,9 @@ class MQTTBaseClient {
     pkt = _as_topics(pkt, ex);
     return this._send('subscribe', pkt, pkt)}
   _sub_chain(topic, ex) {
+    let res = this.subscribe([[ topic ]], ex);
     let subs = this.subs ||(this.subs = new Map());
-    subs.set(topic, this.subscribe([[ topic ]], ex));
+    subs.set((res.topic = topic), (subs.last = res));
     return this }// fluent api -- return this and track side effects
 
   // alias: unsub
@@ -1347,7 +1359,7 @@ async function _pub(self, pkt, pub_opt) {
 
   if (pub_opt) {
     if (pub_opt.props) {
-      pkt.props = props;}
+      pkt.props = pub_opt.props;}
     if (pub_opt.xform) {
       pkt = pub_opt.xform(pkt) || pkt;} }
 

@@ -1,7 +1,7 @@
 import rpi_jsy from 'rollup-plugin-jsy'
 import rpi_dgnotify from 'rollup-plugin-dgnotify'
 import rpi_resolve from '@rollup/plugin-node-resolve'
-import { terser as rpi_terser } from 'rollup-plugin-terser'
+import rpi_terser from '@rollup/plugin-terser'
 import { builtinModules } from 'module'
 
 const _rpis_ = (defines, ...args) => [

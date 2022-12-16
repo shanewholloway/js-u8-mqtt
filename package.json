@@ -33,13 +33,13 @@
     "test"
   ],
   "devDependencies": {
-    "@rollup/plugin-node-resolve": "^13.3.0",
+    "@rollup/plugin-node-resolve": "^15.0.1",
+    "@rollup/plugin-terser": "^0.2.0",
     "qsrv": "^0.2.6",
-    "regexparam": "^2.0.0",
-    "rollup": "^2.75.6",
+    "regexparam": "^2.0.1",
+    "rollup": "^2.79.1",
     "rollup-plugin-dgnotify": "^0.1.8",
-    "rollup-plugin-jsy": "^1.7.4",
-    "rollup-plugin-terser": "^7.0.2",
+    "rollup-plugin-jsy": "^1.7.5",
     "u8-mqtt-packet": "^0.2.5"
   },
   "scripts": {
