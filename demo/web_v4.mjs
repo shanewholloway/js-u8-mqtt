@@ -1,14 +1,22 @@
 import mqtt_client from '../esm/web/v4.mjs'
-
-import {somewhere_in_your_code, goodbye} from './support_common.mjs'
 import demo_cfg from './support_config.mjs'
+import {
+  setup_in_your_code,
+  somewhere_in_your_code,
+  goodbye,
+} from './support_common.mjs'
 
 
-console.log('in web_v4.mjs')
+const ONESHOT = '#oneshot' == location.hash
+console.log('in web_v4.mjs', {ONESHOT})
 
 const my_mqtt = mqtt_client({on_live})
   .with_websock(demo_cfg.websock_url)
 
+if (! ONESHOT)
+  my_mqtt.with_autoreconnect()
+
+setup_in_your_code(my_mqtt)
 
 async function on_live(my_mqtt) {
   try {
@@ -18,12 +26,9 @@ async function on_live(my_mqtt) {
       'u8-mqtt-demo/another/pineapple/mango',
       `Web-side v4 Fruity fun: ${new Date}`)
 
-    //await goodbye(my_mqtt)
+    if (ONESHOT)
+      await goodbye(my_mqtt)
   } catch (err) {
     console.warn(err)
   }
 }
-
-
-// allow playing with my_mqtt from developer console
-window.my_mqtt = my_mqtt

@@ -10,7 +10,7 @@ listen:
     ip: '::'
     module: ejabberd_http
     request_handlers:
-      '/mqtt': mod_mqtt
+      '/': mod_mqtt
   -
     port: 1883
     ip: '::'

@@ -850,58 +850,70 @@ function mqtt_session_ctx(mqtt_level) {
   return ctx(mqtt_level)
 }
 
+Object.freeze({ao_done: true});
+
+function ao_defer_ctx(as_res = (...args) => args) {
+  let y,n,_pset = (a,b) => { y=a, n=b; };
+  return p =>(
+    p = new Promise(_pset)
+  , as_res(p, y, n)) }
+
+const ao_defer_v = /* #__PURE__ */
+  ao_defer_ctx();
+
+Promise.resolve({type:'init'});
+
 function _mqtt_conn(client, [on_mqtt, pkt_future]) {
-  let q0 = _tiny_deferred_queue();
-  let q = _tiny_deferred_queue();
-
-  let _asy_send = async (...args) =>
-    (await q)(...args);
-  let _send = client._send = _asy_send;
-
-  let _ping = () => client._send('pingreq');
-  let tid_ping, _is_set = false;
+  let _q_init = ao_defer_v(), _q_ready = ao_defer_v();
+  let _send_ready = async (...args) => (await _q_ready[0])(...args);
+  let _send_mqtt_pkt;
+  client._send = _send_ready;
 
   return {
-    is_live: (() =>_asy_send !== _send)
-  , is_set: (() =>_is_set)
+    async when_ready() {
+      if (! _send_mqtt_pkt) {
+        await _q_ready[0];} }
 
-  , reset() {
-      tid_ping = clearInterval(tid_ping);
-      client._send = _send = _asy_send;
-      _is_set = false;
+  , ping: _ping_interval (() =>_send_mqtt_pkt?.('pingreq'))
 
-      // call client.on_reconnect in next promise microtask
-      _async_evt(client, client.on_reconnect);}
+  , reset(err) {
+      if (! _send_mqtt_pkt) {return}
 
-  , ping(td) {
-      tid_ping = clearInterval(tid_ping);
-      if (td) {
-        tid_ping = setInterval(_ping, 1000 * td);
-        if (tid_ping.unref) {
-          tid_ping.unref();} } }
+      if (err) {
+        _q_init[2](err);
+        _async_evt('on_reset_error', err);}
+
+      _send_mqtt_pkt = null;
+      _q_init = ao_defer_v();
+      client._send = _send_ready;
+
+      if (false !== err) {
+        // call client.on_reconnect in next promise microtask
+        _async_evt('on_reconnect');} }
 
   , async send_connect(... args) {
-      if (_asy_send === _send) {
-        _send = await q0;}
+      if (! _send_mqtt_pkt) {
+        _send_mqtt_pkt = await _q_init[0];}
 
       // await connack response
-      let res = await _send(...args);
+      let res = await _send_mqtt_pkt(...args);
 
-      client._send = _send;
-      q.notify(_send);
+      // resolve _q_ready[0] with _send_mqtt_pkt closure
+      _q_ready[1](client._send = _send_mqtt_pkt);
+      _q_ready = ao_defer_v();
+
       return res}
 
-  , set(mqtt_session, send_u8_pkt) {
-      _is_set = true;
+  , is_set: (() =>!! _send_mqtt_pkt)
+  , set([mqtt_decode, mqtt_encode], send_u8_pkt) {
+      if (_send_mqtt_pkt) {
+        throw new Error('Already connected')}
 
-      let [mqtt_decode, mqtt_encode] = mqtt_session;
-
+      let mqtt_ctx = {mqtt: client};
       let on_mqtt_chunk = u8_buf =>
-        on_mqtt(
-          mqtt_decode(u8_buf),
-          {mqtt: client});
+        on_mqtt(mqtt_decode(u8_buf), mqtt_ctx);
 
-      _send = async (type, pkt, key) => {
+      _send_mqtt_pkt = async (type, pkt, key) => {
         let res = undefined !== key
           ? pkt_future(key) : true;
 
@@ -910,29 +922,32 @@ function _mqtt_conn(client, [on_mqtt, pkt_future]) {
 
         return res};
 
-
-      q0.notify(_send);
+      _q_init[1](_send_mqtt_pkt); // resolve _q_init with _send_mqtt_pkt closure
 
       // call client.on_live in next promise microtask
-      _async_evt(client, client.on_live);
+      _async_evt('on_live');
+      return on_mqtt_chunk} }
 
-      return on_mqtt_chunk} } }
+
+  async function _async_evt(evt, err_arg) {
+    let fn_evt = client[evt];
+    if (fn_evt) {
+      try {// microtask break
+        await fn_evt.call(client, client, await err_arg);}
+      catch (err) {
+        client.on_error(err, evt); } }
+    else if (err_arg) {
+      return client.on_error(await err_arg, evt) } } }
 
 
-async function _async_evt(obj, evt) {
-  // microtask break lookup
-  if (undefined !== evt) {
-    await evt.call(obj, await obj);
-  }
-}
-function _tiny_deferred_queue() {
-  let q = []; // tiny resetting deferred queue
-  q.then = y => { q.push(y); };
-  q.notify = v => {
-    for (let fn of q.splice(0,q.length))
-      fn(v); };
-  return q
-}
+
+function _ping_interval(send_ping) {
+  let tid;
+  return (( td ) => {
+    tid = clearInterval(tid);
+    if (td) {
+      tid = setInterval(send_ping, 1000 * td);
+      tid.unref?.();} }) }
 
 function parse(str, loose) {
 	if (str instanceof RegExp) return { keys:false, pattern:str };
@@ -1159,12 +1174,10 @@ class MQTTBaseClient {
   // Handshaking Packets
 
   async connect(pkt={}) {
-    let {client_id: cid} = pkt;
-    if (! cid) {
-      pkt.client_id = cid = this.init_client_id(['u8-mqtt--', '']);}
-    else if (Array.isArray(cid)) {
+    let cid = pkt.client_id || ['u8-mqtt--', ''];
+    if (Array.isArray(cid)) {
       pkt.client_id = cid = this.init_client_id(cid);}
-    else {this.client_id = cid;}
+    this.client_id = cid;
 
     if (null == pkt.keep_alive) {
       pkt.keep_alive = 60;}
@@ -1178,7 +1191,7 @@ class MQTTBaseClient {
 
   async disconnect(pkt={}) {
     let res = await this._send('disconnect', pkt);
-    this._conn_.reset();
+    this._conn_.reset(false);
     return res}
 
   auth(pkt={}) {
@@ -1388,15 +1401,13 @@ class MQTTCoreClient extends MQTTBaseClient {
 
   constructor(opt={}) {
     super(opt);
-    this.with_live(opt.on_live);
-    this.with_reconnect(opt.on_reconnect);}
+    for (let [k,v] of Object.entries(opt)) {
+      if (k.startsWith('on_')) {this[k] = v;} } }
 
-
-  // on_live(client) ::
+  on_live(client) {client.connect();}
   with_live(on_live) {
     if (on_live) {
       this.on_live = on_live;}
-
     return this}
 
   // on_reconnect(client) ::
@@ -1409,6 +1420,18 @@ class MQTTCoreClient extends MQTTBaseClient {
 
     return this}
 
+  _use_conn(fn_reconnect) {
+    return (this.reconnect = fn_reconnect)?.()}
+  with_autoreconnect(ms_delay=2000) {
+    return this.with_reconnect (() => {
+      this.delay(ms_delay)
+        .then(this.reconnect);}) }
+
+  delay(ms) {
+    return new Promise(done => setTimeout(done, ms)) }
+
+  on_error(err, err_path) {
+    console.warn('[[u8-mqtt error: %s]]', err_path, err); }
 
   with_async_iter(async_iter, write_u8_pkt) {
     let on_mqtt_chunk = this._conn_.set(
@@ -1416,11 +1439,13 @@ class MQTTCoreClient extends MQTTBaseClient {
       write_u8_pkt);
 
     this._msg_loop = ((async () => {
-      async_iter = await async_iter;
-      for await (let chunk of async_iter)
-        on_mqtt_chunk(chunk);
-
-      this._conn_.reset();})());
+      try {
+        async_iter = await async_iter;
+        for await (let chunk of async_iter)
+          on_mqtt_chunk(chunk);
+        this._conn_.reset();}
+      catch (err) {
+        this._conn_.reset(err);} })());
 
     return this}
 
@@ -1430,17 +1455,19 @@ class MQTTCoreClient extends MQTTBaseClient {
     if (!Number.isFinite(port)) {
       ({port, hostname} = new URL(port));}
 
-    Deno.connect({
-      port, hostname, transport: 'tcp'})
-    .then (( conn ) =>
-      this.with_async_iter(
-        Deno.iter(conn),
-        u8_pkt => conn.write(u8_pkt)) );
+    return this._use_conn (() => {
+      let conn = Deno.connect({
+        port, hostname, transport: 'tcp'});
 
-    return this}
+      this.with_async_iter(
+        conn.then(Deno.iter,)
+        , async u8_pkt => (await conn).write(u8_pkt));
+
+      return this}) }
 
 
   
+
 
 
 
@@ -1464,9 +1491,16 @@ class MQTTCoreClient extends MQTTBaseClient {
     if (null == websock) {
       websock = 'ws://127.0.0.1:9001';}
 
-    if (websock.origin || 'string' === typeof websock) {
-      websock = new WebSocket(new URL(websock), ['mqtt']);}
+    if (websock.send) {
+      return this._with_websock(websock)}
 
+    websock = new URL(websock);
+    return this._use_conn (() =>
+      this._with_websock(
+        new WebSocket(websock, ['mqtt'])) ) }
+
+
+  _with_websock(websock) {
     websock.binaryType = 'arraybuffer';
 
     let ready, {readyState} = websock;
@@ -1474,8 +1508,7 @@ class MQTTCoreClient extends MQTTBaseClient {
       if (0 !== readyState) {
         throw new Error('Invalid WebSocket readyState') }
 
-      ready = new Promise( y =>
-        websock.addEventListener('open', y, {once: true}));}
+      ready = new Promise(fn => websock.onopen = fn); }
 
 
     let {_conn_} = this;
@@ -1485,16 +1518,14 @@ class MQTTCoreClient extends MQTTBaseClient {
         await ready
       , websock.send(u8_pkt)) );
 
-    websock.addEventListener('close',
-      (() => {
-        delete websock.onmessage;
-        _conn_.reset();})
+    websock.onmessage = evt =>(on_mqtt_chunk(new Uint8Array(evt.data)));
+    websock.onclose = evt => {
+      if (! evt.wasClean) {
+        var err = new Error('websocket connection close');
+        err.code = evt.code;
+        err.reason = evt.reason;}
 
-    , {once: true});
-
-    websock.onmessage = evt =>
-      on_mqtt_chunk(
-        new Uint8Array(evt.data));
+      _conn_.reset(err);};
 
     return this} }
 

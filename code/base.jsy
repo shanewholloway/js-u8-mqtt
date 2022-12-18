@@ -10,12 +10,10 @@ export class MQTTBaseClient ::
   // Handshaking Packets
 
   async connect(pkt={}) ::
-    let {client_id: cid} = pkt
-    if ! cid ::
-      pkt.client_id = cid = this.init_client_id(['u8-mqtt--', ''])
-    else if Array.isArray(cid) ::
+    let cid = pkt.client_id || ['u8-mqtt--', '']
+    if Array.isArray(cid) ::
       pkt.client_id = cid = this.init_client_id(cid)
-    else :: this.client_id = cid
+    this.client_id = cid
 
     if null == pkt.keep_alive ::
       pkt.keep_alive = 60
@@ -29,7 +27,7 @@ export class MQTTBaseClient ::
 
   async disconnect(pkt={}) ::
     let res = await this._send('disconnect', pkt)
-    this._conn_.reset()
+    this._conn_.reset(false)
     return res
 
   auth(pkt={}) ::
@@ -123,7 +121,7 @@ export class MQTTBaseClient ::
 
   #IF PLAT_WEB
     sess_client_id(parts) ::
-      let key = `client_id ${parts.join('')}`
+      let key = parts.join('\x20')
       let cid = sessionStorage.getItem(key)
       if null == cid ::
         cid = this.new_client_id(parts)

@@ -10,15 +10,13 @@ export class MQTTCoreClient extends MQTTBaseClient ::
 
   constructor(opt={}) ::
     super(opt)
-    this.with_live(opt.on_live)
-    this.with_reconnect(opt.on_reconnect)
+    for let [k,v] of Object.entries(opt) ::
+      if k.startsWith('on_') :: this[k] = v
 
-
-  // on_live(client) ::
+  on_live(client) :: client.connect()
   with_live(on_live) ::
     if on_live ::
       this.on_live = on_live
-
     return this
 
   // on_reconnect(client) ::
@@ -31,6 +29,18 @@ export class MQTTCoreClient extends MQTTBaseClient ::
 
     return this
 
+  _use_conn(fn_reconnect) ::
+    return (this.reconnect = fn_reconnect)?.()
+  with_autoreconnect(ms_delay=2000) ::
+    return this.with_reconnect @::
+      this.delay(ms_delay)
+        .then(this.reconnect)
+
+  delay(ms) ::
+    return new Promise @ done => setTimeout(done, ms)
+
+  on_error(err, err_path) ::
+    console.warn @ '[[u8-mqtt error: %s]]', err_path, err
 
   with_async_iter(async_iter, write_u8_pkt) ::
     let on_mqtt_chunk = this._conn_.set @
@@ -38,11 +48,13 @@ export class MQTTCoreClient extends MQTTBaseClient ::
       write_u8_pkt
 
     this._msg_loop = @!>
-      async_iter = await async_iter
-      for await (let chunk of async_iter)
-        on_mqtt_chunk(chunk)
-
-      this._conn_.reset()
+      try ::
+        async_iter = await async_iter
+        for await (let chunk of async_iter)
+          on_mqtt_chunk(chunk)
+        this._conn_.reset()
+      catch err ::
+        this._conn_.reset(err)
 
     return this
 
@@ -52,14 +64,15 @@ export class MQTTCoreClient extends MQTTBaseClient ::
       if !Number.isFinite(port) ::
         ({port, hostname} = new URL(port))
 
-      Deno.connect @:
-        port, hostname, transport: 'tcp'
-      .then @\ conn =>
-        this.with_async_iter @
-          Deno.iter(conn),
-          u8_pkt => conn.write(u8_pkt)
+      return this._use_conn @::
+        let conn = Deno.connect @:
+          port, hostname, transport: 'tcp'
 
-      return this
+        this.with_async_iter @
+          conn.then @ Deno.iter,
+          async u8_pkt => (await conn).write(u8_pkt)
+
+        return this
 
 
   #IF PLAT_NODEJS
@@ -67,8 +80,9 @@ export class MQTTCoreClient extends MQTTBaseClient ::
       if !Number.isFinite(port) ::
         ({port, hostname} = new URL(port))
 
-      let sock = tcp_connect(port, hostname)
-      return this.with_stream(sock)
+      return this._use_conn @=>
+        this.with_stream @
+          tcp_connect(port, hostname)
 
 
   #IF HAS_STREAM
@@ -86,9 +100,16 @@ export class MQTTCoreClient extends MQTTBaseClient ::
     if null == websock ::
       websock = 'ws://127.0.0.1:9001'
 
-    if websock.origin || 'string' === typeof websock ::
-      websock = new WebSocket(new URL(websock), ['mqtt'])
+    if websock.send ::
+      return this._with_websock(websock)
 
+    websock = new URL(websock)
+    return this._use_conn @=>
+      this._with_websock @
+        new WebSocket(websock, ['mqtt'])
+
+
+  _with_websock(websock) ::
     websock.binaryType = 'arraybuffer'
 
     let ready, {readyState} = websock
@@ -96,8 +117,7 @@ export class MQTTCoreClient extends MQTTBaseClient ::
       if 0 !== readyState ::
         throw new Error @ 'Invalid WebSocket readyState'
 
-      ready = new Promise( y =>
-        websock.addEventListener('open', y, {once: true}))
+      ready = new Promise @ fn => websock.onopen = fn
 
 
     let {_conn_} = this
@@ -107,16 +127,14 @@ export class MQTTCoreClient extends MQTTBaseClient ::
         await ready
         websock.send(u8_pkt)
 
-    websock.addEventListener @ 'close',
-      @::
-        delete websock.onmessage
-        _conn_.reset()
+    websock.onmessage = evt => @ on_mqtt_chunk @ new Uint8Array(evt.data)
+    websock.onclose = evt => ::
+      if ! evt.wasClean ::
+        var err = new Error('websocket connection close')
+        err.code = evt.code
+        err.reason = evt.reason
 
-      {once: true}
-
-    websock.onmessage = evt =>
-      on_mqtt_chunk @
-        new Uint8Array(evt.data)
+      _conn_.reset(err)
 
     return this
 

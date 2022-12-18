@@ -1,5 +1,8 @@
 
-export async function somewhere_in_your_code(my_mqtt) {
+export function setup_in_your_code(my_mqtt) {
+  // allow playing with my_mqtt from Node REPL
+  globalThis.my_mqtt = my_mqtt
+
   my_mqtt
     .on_topic('u8-mqtt-demo/topic/:arg', (pkt, params, ctx) => {
       console.log('topic:', params, [params.arg, pkt.utf8()])
@@ -16,8 +19,10 @@ export async function somewhere_in_your_code(my_mqtt) {
     .sub_topic('u8-mqtt-demo/obj/*', (pkt, params, ctx) => {
       console.log('obj posted:', params, [pkt.payload])
     })
+}
 
-  await my_mqtt.connect({
+export async function somewhere_in_your_code(my_mqtt) {
+  let res_conn = await my_mqtt.connect({
     client_id: ['my-mqtt--', '--demo'],
     will: {
       topic: 'u8-mqtt-demo/bye',
@@ -25,10 +30,13 @@ export async function somewhere_in_your_code(my_mqtt) {
     }
   })
 
+  console.log('Connected', ...res_conn)
+  if (0) return;
+
   await my_mqtt.subscribe('u8-mqtt-demo/topic/+', {qos: 1})
 
   my_mqtt.publish({
-    topic: 'u8-mqtt-demo/topic/node-side-fun-test',
+    topic: 'u8-mqtt-demo/topic/fun-test',
     payload: 'Awesome from the web, NodeJS, and Deno',
     qos: 1,
   })
@@ -64,14 +72,12 @@ export async function somewhere_in_your_code(my_mqtt) {
 }
 
 
-export const delay = ms => new Promise(y => setTimeout(y, ms))
-
 export async function goodbye(my_mqtt) {
-  await delay(100)
+  await my_mqtt.delay(100)
 
   console.log()
   console.log('Will be disconnecting soon')
-  await delay(150)
+  await my_mqtt.delay(150)
 
   console.log()
   console.log(`Disconnecting ${my_mqtt.client_id}`)
