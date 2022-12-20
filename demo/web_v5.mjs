@@ -12,9 +12,7 @@ console.log('in web_v5.mjs', {ONESHOT})
 
 const my_mqtt = mqtt_client({on_live})
   .with_websock(demo_cfg.websock_url)
-
-if (! ONESHOT)
-  my_mqtt.with_autoreconnect()
+  .with_autoreconnect()
 
 setup_in_your_code(my_mqtt)
 

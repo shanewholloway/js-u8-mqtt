@@ -10,31 +10,34 @@ export class MQTTCoreClient extends MQTTBaseClient ::
 
   constructor(opt={}) ::
     super(opt)
-    for let [k,v] of Object.entries(opt) ::
-      if k.startsWith('on_') :: this[k] = v
+    this.with(opt)
 
-  on_live(client) :: client.connect()
-  with_live(on_live) ::
-    if on_live ::
-      this.on_live = on_live
+  with(fns_ns) ::
+    for let [k,v] of Object.entries(fns_ns) ::
+      if k.startsWith('on_') :: this[k] = v
     return this
+
+  // on_live(client) ::
+  with_live(on_live) :: return this.with({on_live})
 
   // on_reconnect(client) ::
-  with_reconnect(on_reconnect) ::
-    if on_reconnect ::
-      this.on_reconnect = on_reconnect
-
-      if ! this._conn_.is_set ::
-        on_reconnect(this)
-
-    return this
+  with_reconnect(on_reconnect) :: return this.with({on_reconnect})
 
   _use_conn(fn_reconnect) ::
     return (this.reconnect = fn_reconnect)?.()
-  with_autoreconnect(ms_delay=2000) ::
-    return this.with_reconnect @::
-      this.delay(ms_delay)
-        .then(this.reconnect)
+  with_autoreconnect(opt=2000) ::
+    if opt.toFixed :: opt = @{} delay: opt
+    return this.with @:
+      on_reconnect() ::
+        this.delay(opt.delay || 2000)
+          .then(this.reconnect)
+          .then(opt.reconnect, opt.error)
+
+  async on_disconnect(client, intentional) ::
+    if ! intentional && client.on_reconnect ::
+      await client.on_reconnect()
+      if ! client.on_live ::
+        await client.connect()
 
   delay(ms) ::
     return new Promise @ done => setTimeout(done, ms)

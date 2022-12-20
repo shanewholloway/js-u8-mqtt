@@ -12,9 +12,7 @@ console.log('in node_v4.mjs', {ONESHOT})
 
 const my_mqtt = mqtt_client({on_live})
   .with_tcp(demo_cfg.tcp.port, demo_cfg.tcp.host)
-
-if (! ONESHOT)
-  my_mqtt.with_autoreconnect()
+  .with_autoreconnect()
 
 setup_in_your_code(my_mqtt)
 

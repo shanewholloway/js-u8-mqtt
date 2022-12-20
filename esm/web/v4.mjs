@@ -881,19 +881,18 @@ function _mqtt_conn(client, [on_mqtt, pkt_future]) {
 
       if (err) {
         _q_init[2](err);
-        _async_evt('on_reset_error', err);}
+        _async_evt('on_reset_error', err, err);}
 
       _send_mqtt_pkt = null;
       _q_init = ao_defer_v();
       client._send = _send_ready;
 
-      if (false !== err) {
-        // call client.on_reconnect in next promise microtask
-        _async_evt('on_reconnect');} }
+      // call client.on_conn_reset in next promise microtask
+      _async_evt('on_disconnect', false===err);}
 
   , async send_connect(... args) {
       if (! _send_mqtt_pkt) {
-        _send_mqtt_pkt = await _q_init[0];}
+        await _q_init[0]; }// _send_mqtt_pkt is set before fulfilled
 
       // await connack response
       let res = await _send_mqtt_pkt(...args);
@@ -929,11 +928,11 @@ function _mqtt_conn(client, [on_mqtt, pkt_future]) {
       return on_mqtt_chunk} }
 
 
-  async function _async_evt(evt, err_arg) {
+  async function _async_evt(evt, arg, err_arg) {
     let fn_evt = client[evt];
     if (fn_evt) {
       try {// microtask break
-        await fn_evt.call(client, client, await err_arg);}
+        await fn_evt.call(client, client, arg, await err_arg);}
       catch (err) {
         client.on_error(err, evt); } }
     else if (err_arg) {
@@ -947,7 +946,13 @@ function _ping_interval(send_ping) {
     tid = clearInterval(tid);
     if (td) {
       tid = setInterval(send_ping, 1000 * td);
-      tid.unref?.();} }) }
+      
+
+
+      
+      // ensure the interval allows the NodeJS event loop to exit
+      tid.unref?.();
+      return true} }) }
 
 function parse(str, loose) {
 	if (str instanceof RegExp) return { keys:false, pattern:str };
@@ -1401,31 +1406,34 @@ class MQTTCoreClient extends MQTTBaseClient {
 
   constructor(opt={}) {
     super(opt);
-    for (let [k,v] of Object.entries(opt)) {
-      if (k.startsWith('on_')) {this[k] = v;} } }
+    this.with(opt);}
 
-  on_live(client) {client.connect();}
-  with_live(on_live) {
-    if (on_live) {
-      this.on_live = on_live;}
+  with(fns_ns) {
+    for (let [k,v] of Object.entries(fns_ns)) {
+      if (k.startsWith('on_')) {this[k] = v;} }
     return this}
+
+  // on_live(client) ::
+  with_live(on_live) {return this.with({on_live})}
 
   // on_reconnect(client) ::
-  with_reconnect(on_reconnect) {
-    if (on_reconnect) {
-      this.on_reconnect = on_reconnect;
-
-      if (! this._conn_.is_set) {
-        on_reconnect(this);} }
-
-    return this}
+  with_reconnect(on_reconnect) {return this.with({on_reconnect})}
 
   _use_conn(fn_reconnect) {
     return (this.reconnect = fn_reconnect)?.()}
-  with_autoreconnect(ms_delay=2000) {
-    return this.with_reconnect (() => {
-      this.delay(ms_delay)
-        .then(this.reconnect);}) }
+  with_autoreconnect(opt=2000) {
+    if (opt.toFixed) {opt ={delay: opt};}
+    return this.with({
+      on_reconnect() {
+        this.delay(opt.delay || 2000)
+          .then(this.reconnect)
+          .then(opt.reconnect, opt.error);} }) }
+
+  async on_disconnect(client, intentional) {
+    if (! intentional && client.on_reconnect) {
+      await client.on_reconnect();
+      if (! client.on_live) {
+        await client.connect();} } }
 
   delay(ms) {
     return new Promise(done => setTimeout(done, ms)) }
