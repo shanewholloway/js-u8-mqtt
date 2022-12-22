@@ -1431,7 +1431,7 @@ class MQTTCoreClient extends MQTTBaseClient {
 
   on_live(client, has_connected) {
     if (has_connected) {
-      client.connect();} }
+      return client.connect()} }
   with_live(on_live) {return this.with({on_live})}
 
   // on_reconnect(client) ::
@@ -1447,9 +1447,9 @@ class MQTTCoreClient extends MQTTBaseClient {
           .then(this.reconnect)
           .then(opt.reconnect, opt.error);} }) }
 
-  async on_disconnect(client, intentional) {
+  on_disconnect(client, intentional) {
     if (! intentional && client.on_reconnect) {
-      await client.on_reconnect();} }
+      return client.on_reconnect()} }
 
   delay(ms) {
     return new Promise(done => setTimeout(done, ms)) }
