@@ -2,10 +2,29 @@ import {_mqtt_conn} from './_conn.jsy'
 import {_mqtt_topic_router} from './_router.jsy'
 import {_mqtt_dispatch} from './_dispatch.jsy'
 
+export class MQTTError extends Error ::
+  constructor(mqtt_pkt, reason=mqtt_pkt.reason) ::
+    super(`[0x${reason.toString(16)}] ${reason.reason}`)
+    this.mqtt_pkt = mqtt_pkt
+    this.reason = reason
+
 export class MQTTBaseClient ::
   constructor(opt={}) ::
     this._conn_ = _mqtt_conn @ this,
       this._init_dispatch(opt, this)
+
+  async conn_emit(evt, arg, err_arg) ::
+    try ::
+      let fn_evt = this[await evt] // microtask break
+      if fn_evt ::
+        await fn_evt.call(this, this, arg, err_arg)
+      else if err_arg ::
+        await this.on_error(err_arg, evt)
+    catch err ::
+      this.on_error(err, evt)
+
+  on_error(err, err_path) ::
+    console.warn @ '[[u8-mqtt error: %s]]', err_path, err
 
   // Handshaking Packets
 
@@ -20,6 +39,9 @@ export class MQTTBaseClient ::
 
     let res = await this._conn_
       .send_connect('connect', pkt, 'connack')
+
+    if 0 != res[0].reason ::
+      throw new this.MQTTError(res[0])
 
     // TODO: merge with server's keep_alive frequency
     this._conn_.ping(pkt.keep_alive)
@@ -152,6 +174,7 @@ export class MQTTBaseClient ::
 ::
   let p = MQTTBaseClient.prototype
   Object.assign @ p, @{}
+    MQTTError
     pub: p.publish
     sub: p.subscribe
     unsub: p.unsubscribe

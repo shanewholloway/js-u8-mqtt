@@ -1,7 +1,7 @@
 import {MQTTBaseClient} from './base.jsy'
 
 #IF PLAT_NODEJS
-  import {connect as tcp_connect} from 'net'
+  import {connect as tcp_connect} from 'node:net'
 
 
 export class MQTTCoreClient extends MQTTBaseClient ::
@@ -14,10 +14,18 @@ export class MQTTCoreClient extends MQTTBaseClient ::
 
   with(fns_ns) ::
     for let [k,v] of Object.entries(fns_ns) ::
-      if k.startsWith('on_') :: this[k] = v
+      if 'function' === typeof v :: this[k] = v
     return this
 
-  // on_live(client) ::
+  log_conn(evt, arg, err_arg) ::
+    //console.info @ '[[u8-mqtt log: %s]]', evt, arg, err_arg
+  async conn_emit(evt, arg, err_arg) ::
+    this.log_conn(evt, arg, err_arg)
+    return super.conn_emit(evt, arg, err_arg)
+
+  on_live(client, has_connected) ::
+    if has_connected ::
+      client.connect()
   with_live(on_live) :: return this.with({on_live})
 
   // on_reconnect(client) ::
@@ -36,14 +44,9 @@ export class MQTTCoreClient extends MQTTBaseClient ::
   async on_disconnect(client, intentional) ::
     if ! intentional && client.on_reconnect ::
       await client.on_reconnect()
-      if ! client.on_live ::
-        await client.connect()
 
   delay(ms) ::
     return new Promise @ done => setTimeout(done, ms)
-
-  on_error(err, err_path) ::
-    console.warn @ '[[u8-mqtt error: %s]]', err_path, err
 
   with_async_iter(async_iter, write_u8_pkt) ::
     let on_mqtt_chunk = this._conn_.set @
