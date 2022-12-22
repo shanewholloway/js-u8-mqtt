@@ -36,7 +36,7 @@ export function _mqtt_conn(client, [on_mqtt, pkt_future]) ::
         // resolve _q_ready[0] with _send_mqtt_pkt closure
         _q_ready[1](client._send = _send_mqtt_pkt)
         _q_ready = ao_defer_v()
-        client.conn_emit('on_ready', _has_connected)
+        client.conn_emit('on_ready')
 
       return res
 
