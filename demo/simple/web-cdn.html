@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+  <meta charset='utf-8' />
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <title>U8-MQTT over WebSocket</title>
+
+  <link rel='icon' href='data:image/png;base64,' />
+  <link rel='stylesheet' crossorigin='anonymous' href='https://cdn.jsdelivr.net/npm/shoelace-css@1.0.0-beta24/dist/shoelace.css' />
+  <style>main { max-width: 40em; margin: 2em auto; }</style>
+
+</head>
+
+<body>
+<main>
+  <h1>u8-mqtt</h1>
+
+  <div class='btn-group'>
+    <button data-topic="apple">Send apple message</button>
+    <button data-topic="chili">Send chili message</button>
+    <button data-topic="onion">Send onion message</button>
+  </div>
+
+  <output class='output'></output>
+</main>
+
+<script>
+  // some global demo utility functions
+  function demo_show_msg(msg, ...args) {
+    console.log(msg, ...args)
+
+    let el_msg = dom0('pre', ''+msg,
+      dom0('code', JSON.stringify(args, null, 2)))
+
+    document.querySelector('main .output')
+      .prepend(el_msg)
+  }
+
+  function demo_hook_buttons(my_mqtt, mqtt_demo_action) {
+    window.my_mqtt = my_mqtt // for playing with in the browser console
+
+    document.querySelector('main .btn-group')
+      .onclick = (evt) => mqtt_demo_action(evt.target.dataset)
+  }
+
+  function dom0(node, ...z) {
+    node = document.createElement(node)
+    node.append(...z)
+    return node
+  }
+</script>
+
+
+
+<script type=module>
+  // import mqtt_client from 'https://cdn.jsdelivr.net/npm/u8-mqtt/esm/web/v4.min.mjs'
+  // import mqtt_client from 'https://cdn.jsdelivr.net/npm/u8-mqtt/esm/web/v5.min.mjs'
+  import mqtt_client from 'https://cdn.jsdelivr.net/npm/u8-mqtt/esm/web/index.mjs'
+
+  let my_mqtt = mqtt_client()
+    .with_websock('wss://test.mosquitto.org:8081')
+    //.with_autoreconnect()
+
+  demo_hook_buttons(my_mqtt, send_demo_message)
+  demo_show_msg('connecting')
+
+
+  let tip = await my_mqtt.connect()
+  demo_show_msg('connected', tip)
+
+
+  my_mqtt.subscribe_topic(
+    'u8-mqtt/demo-simple/:topic',
+    (pkt, params, ctx) => {
+      try {
+        var payload = `{u8 hex:${Array.from(pkt.payload, v => v.toString(16)).join('')}}`
+        var utf8 = pkt.utf8()
+        var json = pkt.json()
+      } catch (err) {}
+
+      demo_show_msg('topic packet',
+        {params, utf8, json, pkt: {... pkt, payload}})
+    })
+
+  await my_mqtt.json_send(
+    `u8-mqtt/demo-simple/live`,
+    { note: 'from Web live demo',
+      live: new Date().toISOString() })
+
+
+
+  function send_demo_message(info) {
+    return my_mqtt.json_send(
+      `u8-mqtt/demo-simple/${info.topic}`,
+      { ... info,
+        now: new Date().toISOString() })
+  }
+</script>
