@@ -26,19 +26,14 @@ export class MQTTCore extends MQTTBase ::
       if 'function' === typeof v :: this[k] = v
     return this
 
-  log_conn(evt, arg, err_arg) ::
-    //console.info @ '[[u8-mqtt log: %s]]', evt, arg, err_arg
-  async conn_emit(evt, arg, err_arg) ::
-    this.log_conn(evt, arg, err_arg)
-    return super.conn_emit(evt, arg, err_arg)
+  //log_conn(evt, arg, err_arg) ::
+  //console.info @ '[[u8-mqtt log: %s]]', evt, arg, err_arg
 
-  on_live(client, has_connected) ::
-    if has_connected ::
+  on_live(client, is_reconnect) ::
+    if is_reconnect ::
       return client.connect()
-  with_live(on_live) :: return this.with({on_live})
 
-  // on_reconnect(client) ::
-  with_reconnect(on_reconnect) :: return this.with({on_reconnect})
+  //on_reconnect(client) ::
 
   _use_conn(fn_reconnect) ::
     return (this.reconnect = fn_reconnect)?.()
@@ -51,8 +46,8 @@ export class MQTTCore extends MQTTBase ::
           .then(opt.reconnect, opt.error)
 
   on_disconnect(client, intentional) ::
-    if ! intentional && client.on_reconnect ::
-      return client.on_reconnect()
+    if ! intentional ::
+      return client.on_reconnect?.()
 
   delay(ms) ::
     return new Promise @ done => setTimeout(done, ms)
@@ -109,19 +104,12 @@ export class MQTTCore extends MQTTBase ::
 
 
   with_websock(websock) ::
-    if null == websock ::
-      websock = 'ws://127.0.0.1:9001'
+    if ! websock?.send ::
+      websock = new URL(websock || 'ws://127.0.0.1:9001')
+      return this._use_conn @=>
+        this.with_websock @
+          new WebSocket(websock, ['mqtt'])
 
-    if websock.send ::
-      return this._with_websock(websock)
-
-    websock = new URL(websock)
-    return this._use_conn @=>
-      this._with_websock @
-        new WebSocket(websock, ['mqtt'])
-
-
-  _with_websock(websock) ::
     websock.binaryType = 'arraybuffer'
 
     let ready, {readyState} = websock

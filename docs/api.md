@@ -1,3 +1,13 @@
+### Use
+
+- from [Web CDN](./use_from_web_cdn.md)
+- from [Web bundler](./use_from_web_bundler.md) like [Rollup][] or [ESBuild][]
+- from [NodeJS](./use_from_nodejs.md)
+- from [Deno](./use_from_deno.md)
+
+ [Rollup]: https://rollupjs.org
+ [ESBuild]: https://esbuild.github.io
+
 ### Creating an MQTT Client
 
 * `mqtt_v4(opt)`
@@ -6,10 +16,6 @@
 * `new MQTTClient_v5(opt)`
 
 Creates an MQTT client instance.
-
-If the `opt.on_live(mqtt)` closure is provided, `mqtt.with_live(opt.on_live)` is called.
-
-If the `opt.on_reconnect(mqtt)` closure is provided, `mqtt.with_reconnect(opt.on_reconnect)` is called.
 
 If the `opt.on_mqtt_type` object is provided, `mqtt._init_dispatch(opt)` uses it for packet dispatching.
 By default, `mqtt_publish` directs the packet to `mqtt.router` for dispatching.
@@ -21,21 +27,27 @@ Please read [`_conn.jsy`](../code/_conn.jsy) for details.
 
 ### Transport
 
+* `mqtt.with_autoreconnect(u16 | {delay : u16, reconnect: function, error: function})` will set up `mqtt.on_reconnect` callback to restore connection.
+
 * `mqtt.with_websock(websock)` connects to MQTT using a WebSocket. Pass either a URL or a WebSocket instance.
+
+* `mqtt.with_tcp(...args)` connects to MQTT over a TCP socket. See [NodeJS's `net.connect()`](https://nodejs.org/api/net.html#net_net_connect)
 
 * `mqtt.with_stream(duplex_stream)` connects to MQTT using [NodeJS's duplex stream](https://nodejs.org/api/stream.html#stream_class_stream_duplex) abstraction. See `.with_tcp()` for a simple TCP connection.
 
-* `mqtt.with_tcp(...args)` invokes `this.with_stream(net.connect(...args))` to connect to MQTT over a TCP socket. See [NodeJS's `net.connect()`](https://nodejs.org/api/net.html#net_net_connect)
+* `mqtt.with_async_iter(async_iter, write_u8_pkt)`
 
 * Connection callbacks
 
-  * `mqtt.on_live(mqtt)` -- Called upon transport connection. Override or install via constructor.
+  * `mqtt.on_live(mqtt, is_reconnect : boolean)` -- Called upon transport connection or reconnection. Override or install via constructor.
 
-  * `mqtt.with_live(on_live)` -- Assigns `mqtt.on_live` to the provide closure. Returns `this`.
+  * `mqtt.on_disconnect(mqtt, intentional : boolean)` -- Called upon disconnect or transport interruption. Override or install via constructor.
 
-  * `mqtt.on_reconnect(mqtt)` -- Called upon disconnect or transport interruption. Override or install via constructor.
+  * `mqtt.on_reconnect(mqtt)` -- Called upon unintentional disconnect. Override or install via constructor.
 
-  * `mqtt.with_reconnect(on_reconnect)` -- Assigns `mqtt.on_reconnect` to the provide closure. Invokes `on_reconnect` if `_conn_.is_set` is `false`. Returns `this`.
+  * `mqtt.log_conn(evt, arg, err_arg)` -- Called for observing state transitions of an MQTT connection.
+
+      `mqtt.with({ log_conn(evt, arg, err_arg) { console.info('[[u8-mqtt log: %s]]', evt, arg, err_arg) } })`
 
 
 ### Packets

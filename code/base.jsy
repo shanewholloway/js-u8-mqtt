@@ -14,6 +14,7 @@ export class MQTTBase ::
       this._init_dispatch(opt, this)
 
   async conn_emit(evt, arg, err_arg) ::
+    this.log_conn?.(evt, arg, err_arg)
     try ::
       let fn_evt = this[await evt] // microtask break
       if fn_evt ::
