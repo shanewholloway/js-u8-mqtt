@@ -1,9 +1,9 @@
 # Use from NodeJS
 
-See [demo/simple/nodejs.mjs](../demo/simple/nodejs.mjs) source code.
+See [demo/simple/nodejs.js](../demo/simple/nodejs.js) source code.
 Run with:
 
-    node ./demo/simple/nodejs.mjs
+    node ./demo/simple/nodejs.js
 
 
 The code presumes `u8-mqtt` is able to be imported:

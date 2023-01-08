@@ -1,16 +1,25 @@
-import {MQTTBaseClient} from './base.jsy'
+import mqtt_pkt_ctx from 'u8-mqtt-packet/esm/codec_bind.js'
+import { MQTTBase } from './base.jsy'
 
 #IF PLAT_NODEJS
   import {connect as tcp_connect} from 'node:net'
 
+const pkt_api = {
+  utf8(u8) { return new TextDecoder('utf-8').decode(u8 || this.payload ) },
+  json(u8) { return JSON.parse( this.utf8(u8) || null ) },
+  text(u8) { return this.utf8(u8) },
+}
 
-export class MQTTCoreClient extends MQTTBaseClient ::
-  static _with_session(mqtt_session) ::
-    this.prototype._mqtt_session = mqtt_session
-
+export class MQTTCore extends MQTTBase ::
   constructor(opt={}) ::
     super(opt)
     this.with(opt)
+
+  static mqtt_ctx(mqtt_level, mqtt_opts, pkt_ctx=pkt_api) ::
+    let self = class extends this {}
+    self.prototype.mqtt_ctx =
+      mqtt_pkt_ctx(mqtt_level, mqtt_opts, pkt_ctx)
+    return self
 
   with(fns_ns) ::
     for let [k,v] of Object.entries(fns_ns) ::
@@ -50,7 +59,7 @@ export class MQTTCoreClient extends MQTTBaseClient ::
 
   with_async_iter(async_iter, write_u8_pkt) ::
     let on_mqtt_chunk = this._conn_.set @
-      this._mqtt_session(),
+      this.mqtt_ctx,
       write_u8_pkt
 
     this._msg_loop = @!>
@@ -91,15 +100,12 @@ export class MQTTCoreClient extends MQTTBaseClient ::
           tcp_connect(port, hostname)
 
 
-  #IF HAS_STREAM
-    with_stream(read_stream, write_stream) ::
-      if undefined === write_stream ::
-        write_stream = read_stream
+  with_stream(read_stream, write_stream) ::
+    if undefined === write_stream ::
+      write_stream = read_stream
 
-      return this.with_async_iter @ read_stream,
-        u8_pkt => write_stream.write(u8_pkt)
-
-
+    return this.with_async_iter @ read_stream,
+      u8_pkt => write_stream.write(u8_pkt)
 
 
   with_websock(websock) ::
@@ -128,7 +134,7 @@ export class MQTTCoreClient extends MQTTBaseClient ::
 
     let {_conn_} = this
     let on_mqtt_chunk = _conn_.set @
-      this._mqtt_session(),
+      this.mqtt_ctx,
       async u8_pkt => @
         await ready
         websock.send(u8_pkt)
@@ -144,3 +150,4 @@ export class MQTTCoreClient extends MQTTBaseClient ::
 
     return this
 
+export { MQTTCore as default }

@@ -1,7 +1,7 @@
-import mqtt_client from 'u8-mqtt/esm/node/v4.mjs'
-import demo_cfg from './support_config.mjs'
+import mqtt_client from 'u8-mqtt/esm/node/v4.js'
+import demo_cfg from './support_config.js'
 
-console.log('in script_like_updates.mjs')
+console.log('in script_like_updates.js')
 
 const my_mqtt = mqtt_client()
   .with_tcp(demo_cfg.tcp.port, demo_cfg.tcp.host)

@@ -1,5 +1,5 @@
-import mqtt_client from 'u8-mqtt/esm/node/v5.mjs'
-import demo_cfg from '../support_config.mjs'
+import mqtt_client from 'u8-mqtt/esm/node/v5.js'
+import demo_cfg from '../support_config.js'
 
 
 const my_mqtt = mqtt_client({on_live})

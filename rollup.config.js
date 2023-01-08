@@ -15,7 +15,7 @@ const _cfg_ = {
   plugins: _rpis_({}) }
 
 const cfg_nodejs = { ..._cfg_,
-  plugins: _rpis_({PLAT_NODEJS: true, HAS_STREAM: true}) }
+  plugins: _rpis_({PLAT_NODEJS: true}) }
 
 const cfg_deno = { ..._cfg_,
   plugins: _rpis_({PLAT_DENO: true}) }
@@ -27,7 +27,6 @@ let is_watch = process.argv.includes('--watch')
 const cfg_web_min = is_watch ? null : { ... cfg_web,
   plugins: _rpis_({PLAT_WEB: true}, rpi_terser()) }
 
-const _out_ = { sourcemap: true }
 
 
 export default [
@@ -42,26 +41,20 @@ function * add_jsy(src_name, opt={}) {
 
   if (cfg_nodejs)
     yield ({ ... cfg_nodejs, input, output: [
-      { ... _out_, file: `cjs/${src_name}.cjs`, format: 'cjs', exports:opt.exports || 'named' },
-      { ... _out_, file: `esm/node/${src_name}.js`, format: 'es' },
-      { ... _out_, file: `esm/node/${src_name}.mjs`, format: 'es' },
+      { file: `cjs/${src_name}.cjs`, format: 'cjs', exports:opt.exports || 'named', sourcemap: true },
+      { file: `esm/node/${src_name}.js`, format: 'es', sourcemap: true },
+      { file: `esm/node/${src_name}.mjs`, format: 'es', sourcemap: true },
     ]})
 
   if (cfg_deno)
     yield ({ ... cfg_deno, input,
-      output: [
-        { ... _out_, file: `esm/deno/${src_name}.js`, format: 'es' },
-        { ... _out_, file: `esm/deno/${src_name}.mjs`, format: 'es' },
-      ]})
+      output: { file: `esm/deno/${src_name}.js`, format: 'es', sourcemap: true } })
 
   if (cfg_web)
     yield ({ ... cfg_web, input,
-      output: [
-        { ... _out_, file: `esm/web/${src_name}.js`, format: 'es' },
-        { ... _out_, file: `esm/web/${src_name}.mjs`, format: 'es' },
-      ]})
+      output: { file: `esm/web/${src_name}.js`, format: 'es', sourcemap: true } })
 
   if (cfg_web_min)
     yield ({ ... cfg_web_min, input,
-      output: { ... _out_, file: `esm/web/${src_name}.min.mjs`, format: 'es', sourcemap: false }})
+      output: { file: `esm/web/${src_name}.min.js`, format: 'es', sourcemap: false } })
 }

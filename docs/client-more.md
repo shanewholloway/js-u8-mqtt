@@ -31,9 +31,6 @@ opt.on_mqtt_type = {
 
 ### Internal/Extension API
 
-* `MQTTClient._with_session(mqtt_session)` -- static method that assigns prototype-shared `mqtt._mqtt_session`. See [`v4.mjs`](../code/v4.mjs) and [`v5.mjs`](../code/v5.mjs)
-  * `mqtt._mqtt_session` -- See [`session.mjs`](../code/session.mjs)
-
 * `mqtt._send(type, pkt, key)` -- Encode and send an MQTT packet of `type`. See [`_conn.jsy`](../code/_conn.jsy) for details.
 
 * `mqtt._init_router(opt)` -- Creates an express-like topic router. See [`_router.jsy`](../code/_router.jsy) for details.

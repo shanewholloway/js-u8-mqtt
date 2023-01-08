@@ -3,7 +3,7 @@
 <head>
   <meta charset='utf-8' />
   <meta name='viewport' content='width=device-width, initial-scale=1'>
-  <title>U8-MQTT over WebSocket</title>
+  <title>u8-mqtt over WebSocket</title>
 
   <link rel='icon' href='data:image/png;base64,' />
   <link rel='stylesheet' crossorigin='anonymous' href='https://cdn.jsdelivr.net/npm/shoelace-css@1.0.0-beta24/dist/shoelace.css' />
@@ -53,13 +53,13 @@
 
 
 <script type=module>
-  // import mqtt_client from 'https://cdn.jsdelivr.net/npm/u8-mqtt/esm/web/v4.min.mjs'
-  // import mqtt_client from 'https://cdn.jsdelivr.net/npm/u8-mqtt/esm/web/v5.min.mjs'
-  import mqtt_client from 'https://cdn.jsdelivr.net/npm/u8-mqtt/esm/web/index.mjs'
+  // import mqtt_client from 'https://cdn.jsdelivr.net/npm/u8-mqtt/esm/web/v4.min.js'
+  // import mqtt_client from 'https://cdn.jsdelivr.net/npm/u8-mqtt/esm/web/v5.min.js'
+  import mqtt_client from 'https://cdn.jsdelivr.net/npm/u8-mqtt/esm/web/index.js'
 
   let my_mqtt = mqtt_client()
     .with_websock('wss://test.mosquitto.org:8081')
-    //.with_autoreconnect()
+    .with_autoreconnect()
 
   demo_hook_buttons(my_mqtt, send_demo_message)
   demo_show_msg('connecting')

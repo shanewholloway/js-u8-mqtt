@@ -1,7 +1,7 @@
 {
   "name": "u8-mqtt",
   "description": "MQTT client using Uint8Array -- suitable for use in the Browser, NodeJS, and Deno.land.",
-  "version": "0.2.0-2",
+  "version": "0.3.0-0",
   "license": "BSD-2-Clause",
   "author": "Shane Holloway <shane.holloway@ieee.org>",
   "homepage": "https://github.com/shanewholloway/js-u8-mqtt#readme",
@@ -20,6 +20,7 @@
   "type": "module",
   "main": "./cjs/index.cjs",
   "module": "./esm/node/index.js",
+  "browser": "./esm/web/index.min.js",
   "exports": {
     "./esm/*": "./esm/*",
     "./cjs/*": "./cjs/*",
@@ -34,14 +35,14 @@
   ],
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.0.1",
-    "@rollup/plugin-terser": "^0.2.0",
+    "@rollup/plugin-terser": "^0.2.1",
     "qsrv": "^0.2.6",
     "regexparam": "^2.0.1",
     "roap": "^0.5.15",
     "rollup": "^2.79.1",
     "rollup-plugin-dgnotify": "^0.1.8",
     "rollup-plugin-jsy": "^1.7.5",
-    "u8-mqtt-packet": "^0.2.5"
+    "u8-mqtt-packet": "^0.3.0"
   },
   "scripts": {
     "serve": "qsrv -- *.html esm/",
@@ -49,11 +50,14 @@
     "prebuild": "test -d ./node_modules || npm -s ci",
     "build": "rollup --config",
     "watch": "rollup --config --watch",
+    "precompress": "rm -rf esm/web/* ; npm -s run build",
+    "compress": "gzip -k esm/web/*.min.js ; brotli esm/web/*.min.js",
+    "postcompress": "node ./_util/doc_compressed.mjs docs/compressed.md",
     "dkr_deps": "docker stack deploy -c test/integ/deps-deploy.yml integ_mqtt",
-    "demo:node_v4": "node ./demo/node_v4.mjs",
-    "demo:node_v5": "node ./demo/node_v5.mjs",
-    "demo:deno_v4": "deno run --allow-net --allow-env=U8_MQTT ./demo/deno_v4.mjs",
-    "demo:deno_v5": "deno run --allow-net --allow-env=U8_MQTT ./demo/deno_v5.mjs",
+    "demo:node_v4": "node ./demo/node_v4.js",
+    "demo:node_v5": "node ./demo/node_v5.js",
+    "demo:deno_v4": "deno run --allow-net --allow-env=U8_MQTT ./demo/deno_v4.js",
+    "demo:deno_v5": "deno run --allow-net --allow-env=U8_MQTT ./demo/deno_v5.js",
     "socat:ws:mosquitto_v16": "nix-shell -p socat --run 'socat -dd tcp-listen:6880,reuseaddr,fork tcp:localhost:9880'",
     "socat:tcp:mosquitto_v16": "nix-shell -p socat --run 'socat -dd tcp-listen:6883,reuseaddr,fork tcp:localhost:9883'",
     "socat:ws:mosquitto_v20": "nix-shell -p socat --run 'socat -dd tcp-listen:6880,reuseaddr,fork tcp:localhost:9890'",
@@ -62,6 +66,6 @@
     "socat:tcp:ejabberd": "nix-shell -p socat --run 'socat -dd tcp-listen:6883,reuseaddr,fork tcp:localhost:5883'",
     "pretest": "npm -s run build",
     "test": "cd test; npm -s run test",
-    "prepublishOnly": "npm -s run clean && npm -s run test"
+    "prepublishOnly": "npm -s run compress && npm -s run test"
   }
 }

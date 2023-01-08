@@ -1,7 +1,7 @@
-export {MQTTClient_v4, mqtt_v4, default} from './v4.mjs'
-export {MQTTClient_v5, mqtt_v5} from './v5.mjs'
-
-export * from './session.mjs'
+export {
+  MQTTClient_v5, mqtt_v5,
+  MQTTClient_v4, mqtt_v4, mqtt_v4 as default, // u8-mqtt-packet version 5 can also parse version 4 (3.1.1) packets
+} from './v5.mjs'
 
 export * from './core.jsy'
 export * from './base.jsy'

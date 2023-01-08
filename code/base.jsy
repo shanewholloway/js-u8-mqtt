@@ -8,7 +8,7 @@ export class MQTTError extends Error ::
     this.mqtt_pkt = mqtt_pkt
     this.reason = reason
 
-export class MQTTBaseClient ::
+export class MQTTBase ::
   constructor(opt={}) ::
     this._conn_ = _mqtt_conn @ this,
       this._init_dispatch(opt, this)
@@ -159,20 +159,16 @@ export class MQTTBaseClient ::
     return this.router = _mqtt_topic_router(this)
 
   _init_dispatch(opt) ::
-    let router = this._init_router(opt, this)
-
     let tgt = @{}
       __proto__: opt.on_mqtt_type || {}
-      router
+      router: this._init_router(opt, this)
 
-    if ! tgt.mqtt_publish ::
-      tgt.mqtt_publish = router.invoke
-
+    tgt.mqtt_publish ||= tgt.router.invoke
     return _mqtt_dispatch(this, tgt)
 
 
 ::
-  let p = MQTTBaseClient.prototype
+  let p = MQTTBase.prototype
   Object.assign @ p, @{}
     MQTTError
     pub: p.publish

@@ -41,20 +41,21 @@ export function _mqtt_conn(client, [on_mqtt, pkt_future]) ::
       return res
 
     is_set: @=> !! _send_mqtt_pkt
-    set([mqtt_decode, mqtt_encode], send_u8_pkt) ::
+    set(mqtt_ctx, send_u8_pkt) ::
       if _send_mqtt_pkt ::
         throw new Error('Already connected')
 
-      let mqtt_ctx = {mqtt: client}
+      mqtt_ctx = mqtt_ctx.mqtt_stream()
+      let sess_ctx = {mqtt: client}
       let on_mqtt_chunk = u8_buf =>
-        on_mqtt(mqtt_decode(u8_buf), mqtt_ctx)
+        on_mqtt(mqtt_ctx.decode(u8_buf), sess_ctx)
 
       _send_mqtt_pkt = async (type, pkt, key) => ::
         let res = undefined !== key
           ? pkt_future(key) : true
 
         await send_u8_pkt @
-          mqtt_encode(type, pkt)
+          mqtt_ctx.encode_pkt(type, pkt)
 
         return res
 

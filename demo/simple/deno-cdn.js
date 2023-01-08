@@ -3,7 +3,7 @@ import mqtt_client from 'https://esm.sh/u8-mqtt/esm/deno/index.js'
 let my_mqtt = mqtt_client()
   .with_tcp('tcp://test.mosquitto.org:1883')
   // or .with_tcp(1883, 'test.mosquitto.org')
-  //.with_autoreconnect()
+  .with_autoreconnect()
 
 await my_mqtt.connect()
 
