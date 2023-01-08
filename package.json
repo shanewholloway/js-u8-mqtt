@@ -34,13 +34,13 @@
     "test"
   ],
   "devDependencies": {
-    "@rollup/plugin-json": "^6.0.0",
     "@rollup/plugin-node-resolve": "^15.0.1",
     "@rollup/plugin-terser": "^0.3.0",
+    "@rollup/plugin-virtual": "^3.0.1",
     "qsrv": "^0.2.6",
     "regexparam": "^2.0.1",
     "roap": "^0.5.15",
-    "rollup": "^2.79.1",
+    "rollup": "^3.9.1",
     "rollup-plugin-dgnotify": "^0.1.8",
     "rollup-plugin-jsy": "^1.7.5",
     "u8-mqtt-packet": "^0.3.1"
@@ -53,7 +53,7 @@
     "watch": "rollup --config --watch",
     "precompress": "rm -rf esm/web/* ; npm -s run build",
     "compress": "gzip -k esm/web/*.min.js ; brotli esm/web/*.min.js",
-    "postcompress": "node ./_util/doc_compressed.mjs docs/compressed.md",
+    "postcompress": "node ./_util/doc_compressed.js docs/compressed.md",
     "dkr_deps": "docker stack deploy -c test/integ/deps-deploy.yml integ_mqtt",
     "demo:node_v4": "node ./demo/node_v4.js",
     "demo:node_v5": "node ./demo/node_v5.js",

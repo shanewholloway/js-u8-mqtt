@@ -2,18 +2,20 @@ import rpi_jsy from 'rollup-plugin-jsy'
 import rpi_dgnotify from 'rollup-plugin-dgnotify'
 import rpi_resolve from '@rollup/plugin-node-resolve'
 import rpi_terser from '@rollup/plugin-terser'
-import rpi_json from '@rollup/plugin-json'
-import { builtinModules } from 'module'
+import rpi_virtual from '@rollup/plugin-virtual'
+import pkg from './package.json' assert {type: 'json'}
 
 const _rpis_ = (defines, ...args) => [
+  rpi_virtual({
+    'code/version.js': `export const version = '${pkg.version}'`,
+  }),
   rpi_jsy({defines}),
-  rpi_json(),
   rpi_resolve(),
   ...args,
   rpi_dgnotify()]
 
 const _cfg_ = {
-  external: id => /^\w*:/.test(id) || builtinModules.includes(id),
+  external: id => /^\w*:/.test(id),
   plugins: _rpis_({}) }
 
 const cfg_nodejs = { ..._cfg_,
@@ -39,7 +41,7 @@ export default [
 
 
 function * add_jsy(src_name, opt={}) {
-  const input = `code/${src_name}.mjs`
+  const input = `code/${src_name}.js`
 
   if (cfg_nodejs)
     yield ({ ... cfg_nodejs, input, output: [
