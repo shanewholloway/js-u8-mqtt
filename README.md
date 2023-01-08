@@ -33,10 +33,10 @@ Targeting [MQTT-3.1.1 (v4)][spec-3.1.1] and [MQTT-5.0.0 (v5)][spec-5.0.0] compat
 
 ## Use
 
-- from [Web CDN](./use_from_web_cdn.md)
-- from [Web bundler](./use_from_web_bundler.md) like [Rollup][] or [ESBuild][]
-- from [NodeJS](./use_from_nodejs.md)
-- from [Deno](./use_from_deno.md)
+- from [Web CDN](./docs/use_from_web_cdn.md)
+- from [Web bundler](./docs/use_from_web_bundler.md) like [Rollup][] or [ESBuild][]
+- from [NodeJS](./docs/use_from_nodejs.md)
+- from [Deno](./docs/use_from_deno.md)
 
  [Rollup]: https://rollupjs.org
  [ESBuild]: https://esbuild.github.io
