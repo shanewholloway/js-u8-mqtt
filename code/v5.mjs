@@ -1,5 +1,6 @@
 import mqtt_opts_v5 from 'u8-mqtt-packet/esm/codec_v5_client.js'
 import MQTTCore from './core.jsy'
+export { version } from '../package.json'
 
 const MQTTClient_v4 = /* #__PURE__ */
   MQTTCore.mqtt_ctx(4, mqtt_opts_v5)
