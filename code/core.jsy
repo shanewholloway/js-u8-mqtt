@@ -3,6 +3,7 @@ import { MQTTBase } from './base.jsy'
 
 #IF PLAT_NODEJS
   import {connect as tcp_connect} from 'node:net'
+  import {connect as tls_connect} from 'node:tls'
 
 const pkt_api = {
   utf8(u8) { return new TextDecoder('utf-8').decode(u8 || this.payload ) },
@@ -27,7 +28,7 @@ export class MQTTCore extends MQTTBase ::
     return this
 
   //log_conn(evt, arg, err_arg) ::
-  //console.info @ '[[u8-mqtt log: %s]]', evt, arg, err_arg
+  //  console.info @ '[[u8-mqtt log: %s]]', evt, arg, err_arg
 
   on_live(client, is_reconnect) ::
     if is_reconnect ::
@@ -69,30 +70,55 @@ export class MQTTCore extends MQTTBase ::
     return this
 
 
+
   #IF PLAT_DENO
-    with_tcp(port, hostname) ::
-      if !Number.isFinite(port) ::
-        ({port, hostname} = new URL(port))
+    with_tcp(...opt) ::
+      opt = this._conn_opt(opt)
+      opt.transport = 'tcp'
+      return this._use_conn @=>
+        this.with_deno_iter @
+          Deno.connect(opt)
 
-      return this._use_conn @::
-        let conn = Deno.connect @:
-          port, hostname, transport: 'tcp'
+    with_tls(...opt) ::
+      opt = this._conn_opt(opt)
+      return this._use_conn @=>
+        this.with_deno_iter @
+          Deno.connectTls(opt)
 
-        this.with_async_iter @
-          conn.then @ Deno.iter,
-          async u8_pkt => (await conn).write(u8_pkt)
+    with_deno_iter(conn) ::
+      return this.with_async_iter @
+        conn.then(Deno.iter),
+        async u8_pkt =>
+          (await conn).write(u8_pkt)
 
-        return this
+    _conn_opt([a0, a1, a2]) ::
+      // (port, hostname, options) or (url, options)
+      if Number.isFinite(a0) ::
+        return {...a2, port: a0, hostname: a1}
 
+      a0 = new URL(a0)
+      return {...a1, port: a0.port, hostname: a0.hostname}
 
   #IF PLAT_NODEJS
-    with_tcp(port, hostname) ::
-      if !Number.isFinite(port) ::
-        ({port, hostname} = new URL(port))
-
+    with_tcp(...opt) ::
+      opt = this._conn_opt(opt)
+      console.log @: opt
       return this._use_conn @=>
         this.with_stream @
-          tcp_connect(port, hostname)
+          tcp_connect(opt)
+
+    with_tls(...opt) ::
+      opt = this._conn_opt(opt)
+      return this._use_conn @=>
+        this.with_stream @
+          tls_connect(opt)
+
+    _conn_opt([a0, a1, a2]) ::
+      // (port, hostname, options) or (url, options)
+      if Number.isFinite(a0) ::
+        return {...a2, port: a0, host: a1}
+      a0 = new URL(a0)
+      return {...a1, port: a0.port, host: a0.hostname}
 
 
   with_stream(read_stream, write_stream) ::
