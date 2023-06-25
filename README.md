@@ -71,9 +71,9 @@ Built for small footprint with ES Modules (ESM) using embedded [u8-mqtt-packet][
 
 | module                  |   brotli | minified |
 |:------------------------|---------:|---------:|
-| `u8-mqtt`               |   6476 B |  19895 B |
-| `u8-mqtt/esm/v5.min.js` |   6384 B |  19694 B |
-| `u8-mqtt/esm/v4.min.js` |   5290 B |  15287 B |
+| `u8-mqtt`               |   6608 B |  19988 B |
+| `u8-mqtt/esm/v5.min.js` |   6518 B |  19815 B |
+| `u8-mqtt/esm/v4.min.js` |   5434 B |  15405 B |
 
 [automated sizing report](./docs/compressed.md)
 
@@ -83,8 +83,8 @@ Built for small footprint with ES Modules (ESM) using embedded [u8-mqtt-packet][
 |---------:|-----:|----------------|-------------|
 |  187.0KB |  12x | [MQTT.js][]    | `curl -sL https://cdn.jsdelivr.net/npm/mqtt@4.0.1/dist/mqtt.min.js \| wc -c`
 |   32.3KB |   2x | [paho][]       | `curl -sL https://cdn.jsdelivr.net/npm/paho-mqtt@1.1.0/paho-mqtt.min.js \| wc -c`
-|   19.9KB | 1.3x | [u8-mqtt][] v5 | `cat ./u8-mqtt/esm/web/v5.min.js \| wc -c`
-|   15.5KB |   1x | [u8-mqtt][] v4 | `cat ./u8-mqtt/esm/web/v4.min.js \| wc -c`
+|   19.8KB | 1.3x | [u8-mqtt][] v5 | `cat ./u8-mqtt/esm/web/v5.min.js \| wc -c`
+|   15.4KB |   1x | [u8-mqtt][] v4 | `cat ./u8-mqtt/esm/web/v4.min.js \| wc -c`
 
  [MQTT.js]: https://github.com/mqttjs/MQTT.js/
  [paho]: https://github.com/eclipse/paho.mqtt.javascript/
