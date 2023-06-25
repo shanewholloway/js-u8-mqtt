@@ -11,7 +11,7 @@ async function on_live(my_mqtt) {
   try {
     await my_mqtt.connect()
 
-    my_mqtt.shared_sub('', 'u8-mqtt-demo/*', pkt =>
+    my_mqtt.sub_topic('u8-mqtt-demo/*', '$share/demo-queue/', pkt =>
       console.log(`AAA {${pkt.retain ? 'retain' : ''} topic:'${pkt.topic}'}`))
   } catch (err) {
     console.warn(err)

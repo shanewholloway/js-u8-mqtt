@@ -14,7 +14,7 @@ async function on_live(my_mqtt) {
       console.log(`BBB {${pkt.retain ? 'retain' : ''} topic:'${pkt.topic}'}:`))
 
     await my_mqtt.connect()
-    await my_mqtt.subscribe('$share/BBB/u8-mqtt-demo/#')
+    await my_mqtt.subscribe('$share/demo-queue/u8-mqtt-demo/#')
   } catch (err) {
     console.warn(err)
   }

@@ -1,5 +1,4 @@
 import {_mqtt_conn} from './_conn.jsy'
-import {_mqtt_topic_router} from './_router.jsy'
 import {_mqtt_dispatch} from './_dispatch.jsy'
 
 export class MQTTError extends Error ::
@@ -60,52 +59,14 @@ export class MQTTBase ::
 
 
   // alias: sub
-  subscribe(pkt, ex) ::
-    pkt = _as_topics(pkt, ex)
+  subscribe(pkt, ex, topic_prefix) ::
+    pkt = _as_topics(pkt, ex, topic_prefix)
     return this._send('subscribe', pkt, pkt)
-  _sub_chain(topic, ex) ::
-    let res = this.subscribe @ [[ topic ]], ex
-    let subs = this.subs || @ this.subs = new Map()
-    subs.set @ (res.topic = topic), (subs.last = res)
-    return this // fluent api -- return this and track side effects
 
   // alias: unsub
-  unsubscribe(pkt, ex) ::
-    pkt = _as_topics(pkt, ex)
+  unsubscribe(pkt, ex, topic_prefix) ::
+    pkt = _as_topics(pkt, ex, topic_prefix)
     return this._send('unsubscribe', pkt, pkt)
-
-  get on_topic() :: return this.router.add
-
-  // alias: sub_topic
-  subscribe_topic(topic_route, ...args) ::
-    this.router.add @ topic_route, true, args.pop() // handler
-    let topic = this.topic_for(topic_route)
-    return this._sub_chain @ topic, args.pop() // ex
-
-  // alias: unsub_topic
-  unsubscribe_topic(topic_route) ::
-    this.router.remove @ topic_route, true
-    let topic = this.topic_for(topic_route)
-    return this.unsubscribe @ [[ topic ]]
-
-  // alias: shared_sub
-  shared_subscribe(group, topic_route, ...args) ::
-    this.router.add @ topic_route, true, args.pop() // handler
-    let topic = this.topic_for(topic_route)
-    if null != group ::
-      topic = `$share/${group}/${topic}`
-    return this._sub_chain @ topic, args.pop() // ex
-
-  // alias: shared_unsub
-  shared_unsubscribe(group, topic_route) ::
-    this.router.remove @ topic_route, true
-    let topic = this.topic_for(topic_route)
-    if null != group ::
-      topic = `$share/${group}/${topic}`
-    return this.unsubscribe @ [[ topic ]]
-
-  topic_for(topic_route) ::
-    return topic_route.replace(/[:*].*$/, '#')
 
 
   // alias: pub
@@ -156,53 +117,72 @@ export class MQTTBase ::
 
   /* async _send(type, pkt) -- provided by _conn_ and transport */
 
-  _init_router(opt) ::
-    return this.router = _mqtt_topic_router(this)
-
   _init_dispatch(opt) ::
+    this.constructor?._once_()
+    let router = this.router =
+      this._init_router?.(opt, this)
+
     let tgt = @{}
       __proto__: opt.on_mqtt_type || {}
-      router: this._init_router(opt, this)
+      router
 
-    tgt.mqtt_publish ||= tgt.router.invoke
+    tgt.mqtt_publish ||= router?.invoke
     return _mqtt_dispatch(this, tgt)
 
+  static _aliases() ::
+    return ' pub:publish sub:subscribe unsub:unsubscribe '
 
-::
-  let p = MQTTBase.prototype
-  Object.assign @ p, @{}
-    MQTTError
-    pub: p.publish
-    sub: p.subscribe
-    unsub: p.unsubscribe
-    sub_topic: p.subscribe_topic
-    unsub_topic: p.unsubscribe_topic
-    shared_sub: p.shared_subscribe
-    shared_unsub: p.shared_unsubscribe
-
-  /*
-    p.on_mqtt_type = {
-      mqtt_auth(pkt, ctx) ::
-      mqtt_connect(pkt, ctx) ::
-      mqtt_connack(pkt, ctx) ::
-      mqtt_disconnect(pkt, ctx) ::
-
-      mqtt_publish(pkt, ctx)
-      mqtt_subscribe(pkt, ctx) ::
-      mqtt_unsubscribe(pkt, ctx) ::
-
-      mqtt_pingreq(pkt, ctx) ::
-      mqtt_pingresp(pkt, ctx) ::
-    }
-  */
+  static _once_(self=this) ::
+    self._once_ = _=>0
+    self.MQTTError = MQTTError
+    let p = self.prototype
+    for let alias of self._aliases().split(/\s+/) ::
+      alias = alias.split(':')
+      let fn = alias[1] && p[alias[1]]
+      if fn :: p[alias[0]] = fn
 
 
-function _as_topics(pkt, ex) ::
-  if 'string' === typeof pkt ::
-    return {topics:[pkt], ... ex}
-  if pkt[Symbol.iterator] ::
-    return {topics:[... pkt], ... ex}
-  return ex ? {...pkt, ...ex} : pkt
+/*
+on_mqtt_type = {
+  mqtt_auth(pkt, ctx) ::
+  mqtt_connect(pkt, ctx) ::
+  mqtt_connack(pkt, ctx) ::
+  mqtt_disconnect(pkt, ctx) ::
+
+  mqtt_publish(pkt, ctx)
+  mqtt_subscribe(pkt, ctx) ::
+  mqtt_unsubscribe(pkt, ctx) ::
+
+  mqtt_pingreq(pkt, ctx) ::
+  mqtt_pingresp(pkt, ctx) ::
+}
+*/
+
+
+const _prefix_topics = (topic_prefix, iterable) =>
+  Array.from @ iterable, value => @
+    value.trim // string
+      ? _prefix_topics(topic_prefix, value)
+      : topic_prefix + value
+
+function _as_topics(pkt, ex, topic_prefix) ::
+  if ex?.trim :: // string
+    topic_prefix = ex
+    ex = null
+
+  pkt = @
+    pkt.trim // string
+      ? {topics:[pkt], ... ex}
+    : pkt[Symbol.iterator]
+      ? {topics:[... pkt], ... ex}
+    : ex ? {...pkt, ...ex}
+    : pkt
+
+  if topic_prefix ::
+    // particularly useful with shared queues, e.g.
+    //   topic_prefix = '$share/some-queue-name/'
+    pkt.topics = _prefix_topics(topic_prefix, pkt.topics)
+  return pkt
 
 
 async function _pub(self, pkt, pub_opt) ::

@@ -67,7 +67,5 @@ export const _mqtt_cmdid_dispatch = @{}
       let fn = target[`mqtt_${pkt.type}`]
         || target.mqtt_pkt
 
-      if undefined !== fn ::
-        await fn.call(target, pkt, ctx)
-
+      await fn?.call(target, pkt, ctx)
 

@@ -1,0 +1,41 @@
+/*
+class AbstractTopicRouter ::
+  async invoke(pkt, ctx) ::
+  add(topic_route, ...args) ::
+  remove(topic_route, priority) ::
+  clear(priority) ::
+  find(topic) :: // optional
+  mqtt_topic(topic_route)
+*/
+
+export const with_topic_router = mqtt_topic_router =>
+  MQTTKlass => class extends MQTTKlass ::
+    static _aliases() ::
+      return super._aliases() +
+        ' sub_topic:subscribe_topic unsub_topic:unsubscribe_topic'
+
+    _init_router(opt) ::
+      return mqtt_topic_router(opt, this)
+
+    get on_topic() :: return this.router.add
+
+    _sub_chain(topic, ex, topic_prefix) ::
+      let res = this.subscribe @ [[ topic ]], ex, topic_prefix
+      let subs = this.subs || @ this.subs = new Map()
+      subs.set @ (res.topic = topic), (subs.last = res)
+      return this // fluent api -- return this and track side effects
+
+    // alias: sub_topic
+    subscribe_topic(topic_route, ...args) ::
+      let router = this.router
+      router.add @ topic_route, true, args.pop() // handler
+      let topic = router.mqtt_topic(topic_route)
+      return this._sub_chain @ topic, ...args // ex, topic_prefix
+
+    // alias: unsub_topic
+    unsubscribe_topic(topic_route, ...args) ::
+      let router = this.router
+      router.remove @ topic_route, true
+      let topic = router.mqtt_topic(topic_route)
+      return this.unsubscribe @ [[ topic ]], ...args // topic_prefix
+

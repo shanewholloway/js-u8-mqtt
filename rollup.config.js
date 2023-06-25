@@ -34,13 +34,15 @@ const cfg_web_min = is_watch ? null : { ... cfg_web,
 
 
 export default [
-  ... add_jsy('index'),
-  ... add_jsy('v4'),
-  ... add_jsy('v5'),
+  ... add_entrypoint('index'),
+  ... add_entrypoint('v4'),
+  ... add_entrypoint('v5'),
+  ... add_entrypoint('basic-v4'),
+  ... add_entrypoint('basic-v5'),
 ]
 
 
-function * add_jsy(src_name, opt={}) {
+function * add_entrypoint(src_name, opt={}) {
   const input = `code/${src_name}.js`
 
   if (cfg_nodejs)

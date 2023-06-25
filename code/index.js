@@ -7,7 +7,8 @@ export {
 export * from './core.jsy'
 export * from './base.jsy'
 export * from './_conn.jsy'
-export * from './_router.jsy'
 export * from './_dispatch.jsy'
 export * from './_cmdid_dispatch.jsy'
+export * from './with_topic_router.jsy'
+export * from './router_path.jsy'
 

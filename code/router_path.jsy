@@ -2,15 +2,34 @@
 //  [regexparam]: https://github.com/lukeed/regexparam
 
 import {parse as _rxp_parse} from 'regexparam'
+import {with_topic_router} from './with_topic_router.jsy'
+
+export const with_topic_path_router = /* #__PURE__ */
+  with_topic_router(mqtt_topic_path_router)
+
+
+const mqtt_topic = topic_route =>
+  topic_route
+    .replace(/[*].*$/, '#')
+    .replace(/:\w+\??/g, '+')
+
+export const as_topic_path = topic_route => @
+  topic_route
+    .replace(/#$/, '*') // replace MQTT # wildcard at end
+    .split(/([^\/]*[+][^\/]*)/) // split on MQTT + match tokens
+    .reduce @\ sz, v, idx => sz + @
+      idx & 1 // even entires are body, odd are MQTT + tokens
+        ? `:$${1 + idx>>1}` // replace with `:$#` sequential ids, using ? for partial entries
+        : v // pass through body
 
 function _ignore(pkt, params, ctx) :: ctx.done = true
 
-export function _mqtt_topic_router() ::
+function mqtt_topic_path_router() ::
   let pri_lsts = [[],[]], rm = Symbol()
-  let find = topic => _mqtt_routes_iter(pri_lsts, topic)
+  let find = topic => _routes_iter(pri_lsts, topic)
 
-  return @{} find,
-
+  // return duck-type compatible with AbstractTopicRouter in ./with_topic_router
+  return @{} find, mqtt_topic,
     add(topic_route, ...args) ::
       let fn = args.pop()
       let priority = args.pop()
@@ -20,8 +39,7 @@ export function _mqtt_topic_router() ::
           fn = _ignore
         else throw new TypeError()
 
-      let rte = _rxp_parse @
-        topic_route.replace(/[+#]$/, '*')
+      let rte = _rxp_parse @ as_topic_path @ topic_route
 
       rte.key = topic_route
       rte.tgt = fn
@@ -30,7 +48,7 @@ export function _mqtt_topic_router() ::
 
     remove(topic_route, priority) ::
       let lst = pri_lsts[priority ? 0 : 1]
-      return _mqtt_route_remove([lst], topic_route)
+      return _route_remove([lst], topic_route)
 
     clear(priority) ::
       pri_lsts[priority ? 0 : 1] = []
@@ -45,7 +63,7 @@ export function _mqtt_topic_router() ::
         let res = await fn(pkt, params, ctx)
 
         if rm === res ::
-          _mqtt_route_remove(pri_lsts, fn)
+          _route_remove(pri_lsts, fn)
 
         if ctx.done ::
           break
@@ -56,15 +74,15 @@ export function _mqtt_topic_router() ::
         await ctx.mqtt._send('puback', {pkt_id})
 
 
-export function * _mqtt_routes_iter(all_route_lists, topic) ::
+function * _routes_iter(all_route_lists, topic) ::
   for let route_list of all_route_lists ::
     for let route of route_list ::
-      let res = _mqtt_route_match_one(topic, route)
+      let res = _route_match_one(topic, route)
       if undefined !== res ::
         yield res
 
 
-export function _mqtt_route_match_one(topic, {keys, pattern, tgt}) ::
+function _route_match_one(topic, {keys, pattern, tgt}) ::
   let match = '/' !== topic[0]
     ? pattern.exec('/'+topic)
     : pattern.exec(topic)
@@ -92,7 +110,7 @@ export function _mqtt_route_match_one(topic, {keys, pattern, tgt}) ::
   return [tgt, params]
 
 
-export function _mqtt_route_remove(all_route_lists, query) ::
+function _route_remove(all_route_lists, query) ::
   let match = route => route===query || route.tgt===query || route.key===query
   for let lst of all_route_lists ::
     let i = lst.findIndex(match)
