@@ -119,15 +119,10 @@ export class MQTTBase ::
 
   _init_dispatch(opt) ::
     this.constructor?._once_()
-    let router = this.router =
-      this._init_router?.(opt, this)
-
-    let tgt = @{}
-      __proto__: opt.on_mqtt_type || {}
-      router
-
-    tgt.mqtt_publish ||= router?.invoke
-    return _mqtt_dispatch(this, tgt)
+    let target = @{} __proto__: opt.on_mqtt_type
+    target.mqtt_publish ||=
+      this._init_router?.(opt, this, target)
+    return _mqtt_dispatch(this, target)
 
   static _aliases() ::
     return ' pub:publish sub:subscribe unsub:unsubscribe '

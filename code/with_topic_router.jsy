@@ -14,9 +14,10 @@ export const with_topic_router = mqtt_topic_router =>
       return super._aliases() +
         ' sub_topic:subscribe_topic unsub_topic:unsubscribe_topic'
 
-    _init_router(opt) ::
-      return mqtt_topic_router(opt, this)
-
+    _init_router(opt, client, target) ::
+      let router = this.router = target.router =
+        mqtt_topic_router(opt, this)
+      return router?.invoke
     get on_topic() :: return this.router.add
 
     _sub_chain(topic, ex, topic_prefix) ::
