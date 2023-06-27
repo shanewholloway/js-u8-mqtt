@@ -71,9 +71,9 @@ Built for small footprint with ES Modules (ESM) using embedded [u8-mqtt-packet][
 
 | module                  |   brotli | minified |
 |:------------------------|---------:|---------:|
-| `u8-mqtt`               |   6608 B |  19988 B |
-| `u8-mqtt/esm/v5.min.js` |   6518 B |  19815 B |
-| `u8-mqtt/esm/v4.min.js` |   5434 B |  15405 B |
+| `u8-mqtt`               |   6587 B |  19962 B |
+| `u8-mqtt/esm/v5.min.js` |   6504 B |  19789 B |
+| `u8-mqtt/esm/v4.min.js` |   5420 B |  15379 B |
 
 [automated sizing report](./docs/compressed.md)
 
