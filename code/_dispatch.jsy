@@ -1,5 +1,21 @@
 import {_mqtt_cmdid_dispatch} from './_cmdid_dispatch.jsy'
 
+/*
+on_mqtt_type = {
+  mqtt_auth(pkt, ctx) ::
+  mqtt_connect(pkt, ctx) ::
+  mqtt_connack(pkt, ctx) ::
+  mqtt_disconnect(pkt, ctx) ::
+
+  mqtt_publish(pkt, ctx)
+  mqtt_subscribe(pkt, ctx) ::
+  mqtt_unsubscribe(pkt, ctx) ::
+
+  mqtt_pingreq(pkt, ctx) ::
+  mqtt_pingresp(pkt, ctx) ::
+}
+*/
+
 export function _mqtt_dispatch(opt, target) ::
   let _disp_ = _mqtt_cmdid_dispatch.create(target)
   let { cmdids } = _disp_

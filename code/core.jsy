@@ -12,20 +12,39 @@ const pkt_api = {
 }
 
 export class MQTTCore extends MQTTBase ::
-  constructor(opt={}) ::
-    super(opt)
-    this.with(opt)
-
   static mqtt_ctx(mqtt_level, mqtt_opts, pkt_ctx=pkt_api) ::
     let self = class extends this {}
     self.prototype.mqtt_ctx =
       mqtt_pkt_ctx(mqtt_level, mqtt_opts, pkt_ctx)
     return self
 
-  with(fns_ns) ::
-    for let [k,v] of Object.entries(fns_ns) ::
-      if 'function' === typeof v :: this[k] = v
-    return this
+
+  // automatic Client Id for connect()
+  init_client_id(parts=['u8-mqtt--', '']) ::
+    let cid = this.client_id
+
+    if undefined === cid ::
+      this.client_id = cid = (
+        #IF PLAT_WEB
+          this.sess_client_id(parts)
+        #ELSE
+          this.new_client_id(parts)
+        )
+
+    return cid
+
+  new_client_id(parts) ::
+    return [parts[0], Math.random().toString(36).slice(2), parts[1]].join('')
+
+  #IF PLAT_WEB
+    sess_client_id(parts) ::
+      let key = parts.join('\x20')
+      let cid = sessionStorage.getItem(key)
+      if null == cid ::
+        cid = this.new_client_id(parts)
+        sessionStorage.setItem(key, cid)
+      return cid
+
 
   //log_conn(evt, arg, err_arg) ::
   //  console.info @ '[[u8-mqtt log: %s]]', evt, arg, err_arg

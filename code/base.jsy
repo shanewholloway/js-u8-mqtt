@@ -9,8 +9,14 @@ export class MQTTError extends Error ::
 
 export class MQTTBase ::
   constructor(opt={}) ::
+    this.with(opt)
     this._conn_ = _mqtt_conn @ this,
       this._init_dispatch(opt, this)
+
+  with(fns_ns) ::
+    for let [k,v] of Object.entries(fns_ns) ::
+      if 'function' === typeof v :: this[k] = v
+    return this
 
   async conn_emit(evt, arg, err_arg) ::
     this.log_conn?.(evt, arg, err_arg)
@@ -29,8 +35,9 @@ export class MQTTBase ::
   // Handshaking Packets
 
   async connect(pkt={}) ::
-    let cid = pkt.client_id || ['u8-mqtt--', '']
-    if Array.isArray(cid) ::
+    let cid = pkt.client_id || this.client_id
+    if 'string' !== typeof cid ::
+      // see init_client_id implementation in core.jsy
       pkt.client_id = cid = this.init_client_id(cid)
     this.client_id = cid
 
@@ -69,48 +76,52 @@ export class MQTTBase ::
     return this._send('unsubscribe', pkt, pkt)
 
 
-  // alias: pub
-  publish(pkt, pub_opt) :: return _pub(this, pkt, pub_opt)
-  post(topic, payload, pub_opt) :: return _pub.m(this, topic, payload, pub_opt)
-  send(topic, payload, pub_opt) :: return _pub.mq(this, topic, payload, pub_opt)
-  store(topic, payload, pub_opt) :: return _pub.mqr(this, topic, payload, pub_opt)
+  post(topic, payload, pub_opt) :: // qos:0
+    return this.pub({topic, payload, qos:0}, pub_opt)
+  send(topic, payload, pub_opt) :: // qos:1
+    return this.pub({topic, payload, qos:1}, pub_opt)
+  store(topic, payload, pub_opt) :: // qos:1, retain: 1
+    return this.pub({topic, payload, qos:1, retain: 1}, pub_opt)
 
-  json_post(topic, msg, pub_opt) :: return _pub.o(this, topic, msg, pub_opt)
-  json_send(topic, msg, pub_opt) :: return _pub.oq(this, topic, msg, pub_opt)
-  json_store(topic, msg, pub_opt) :: return _pub.oqr(this, topic, msg, pub_opt)
+  // alias: json_post
+  obj_post(topic, msg, pub_opt) :: // qos:0
+    return this.pub({topic, msg, arg: 'msg', qos:0}, pub_opt)
+  // alias: json_send
+  obj_send(topic, msg, pub_opt) :: // qos:1
+    return this.pub({topic, msg, arg: 'msg', qos:1}, pub_opt)
+  // alias: json_store
+  obj_store(topic, msg, pub_opt) :: // qos:1, retain: 1
+    return this.pub({topic, msg, arg: 'msg', qos:1, retain: 1}, pub_opt)
 
-  obj_post(topic, msg, pub_opt) :: return _pub.o(this, topic, msg, pub_opt)
-  obj_send(topic, msg, pub_opt) :: return _pub.oq(this, topic, msg, pub_opt)
-  obj_store(topic, msg, pub_opt) :: return _pub.oqr(this, topic, msg, pub_opt)
+  // alias: publish -- because 'pub' is shorter for semantic aliases above
+  async pub(pkt, pub_opt) ::
+    if undefined === pkt.payload ::
+      if 'function' === typeof pub_opt ::
+        pub_opt = {fn_encode: pub_opt}
 
+      let {msg} = pkt
+      switch typeof msg ::
+        case 'function':
+          pub_opt = {...pub_opt, fn_encode: msg}
+          // flow into 'undefined' case
+        case 'undefined':
+          // return a single-value closure to publish packets
+          return v => this.pub({...pkt, [pkt.arg || 'payload']: v}, pub_opt)
 
+      // Encode payload from msg; fn_encode allows alternative to JSON.stringify
+      let {fn_encode} = pub_opt || {}
+      pkt.payload = fn_encode
+        ? await fn_encode(msg)
+        : JSON.stringify(msg)
 
-  // Utility Methods
+    if pub_opt ::
+      if pub_opt.props ::
+        pkt.props = pub_opt.props
+      if pub_opt.xform ::
+        pkt = pub_opt.xform(pkt) || pkt
 
-  init_client_id(parts) ::
-    let cid = this.client_id
-
-    if undefined === cid ::
-      this.client_id = cid = (
-        #IF PLAT_WEB
-          this.sess_client_id(parts)
-        #ELSE
-          this.new_client_id(parts)
-        )
-
-    return cid
-
-  new_client_id(parts) ::
-    return [parts[0], Math.random().toString(36).slice(2), parts[1]].join('')
-
-  #IF PLAT_WEB
-    sess_client_id(parts) ::
-      let key = parts.join('\x20')
-      let cid = sessionStorage.getItem(key)
-      if null == cid ::
-        cid = this.new_client_id(parts)
-        sessionStorage.setItem(key, cid)
-      return cid
+    return this._send @ 'publish', pkt,
+      pkt.qos ? pkt : void 0 // key
 
 
   // Internal API
@@ -125,7 +136,7 @@ export class MQTTBase ::
     return _mqtt_dispatch(this, target)
 
   static _aliases() ::
-    return ' pub:publish sub:subscribe unsub:unsubscribe '
+    return ' publish:pub sub:subscribe unsub:unsubscribe json_post:obj_post json_send:obj_send json_store:obj_store'
 
   static _once_(self=this) ::
     self._once_ = _=>0
@@ -136,29 +147,6 @@ export class MQTTBase ::
       let fn = alias[1] && p[alias[1]]
       if fn :: p[alias[0]] = fn
 
-
-/*
-on_mqtt_type = {
-  mqtt_auth(pkt, ctx) ::
-  mqtt_connect(pkt, ctx) ::
-  mqtt_connack(pkt, ctx) ::
-  mqtt_disconnect(pkt, ctx) ::
-
-  mqtt_publish(pkt, ctx)
-  mqtt_subscribe(pkt, ctx) ::
-  mqtt_unsubscribe(pkt, ctx) ::
-
-  mqtt_pingreq(pkt, ctx) ::
-  mqtt_pingresp(pkt, ctx) ::
-}
-*/
-
-
-const _prefix_topics = (topic_prefix, iterable) =>
-  Array.from @ iterable, value => @
-    value.trim // string
-      ? _prefix_topics(topic_prefix, value)
-      : topic_prefix + value
 
 function _as_topics(pkt, ex, topic_prefix) ::
   if ex?.trim :: // string
@@ -176,53 +164,9 @@ function _as_topics(pkt, ex, topic_prefix) ::
   if topic_prefix ::
     // particularly useful with shared queues, e.g.
     //   topic_prefix = '$share/some-queue-name/'
-    pkt.topics = _prefix_topics(topic_prefix, pkt.topics)
+    let _prefix_topics = v =>
+      v.trim ? topic_prefix+v : v.map(_prefix_topics)
+
+    pkt.topics = pkt.topics.map(_prefix_topics)
   return pkt
-
-
-async function _pub(self, pkt, pub_opt) ::
-  if undefined === pkt.payload ::
-    if 'function' === typeof pub_opt ::
-      pub_opt = {fn_encode: pub_opt}
-
-    let {msg} = pkt
-    switch typeof msg ::
-      case 'function':
-        pub_opt = {...pub_opt, fn_encode: msg}
-        // flow into 'undefined' case
-      case 'undefined':
-        // return a single-value closure to publish packets
-        return v => _pub(self, {...pkt, [pkt.arg || 'payload']: v}, pub_opt)
-
-      default:
-        // Encode payload from msg; fn_encode allows alternative to JSON.stringify
-        let {fn_encode} = pub_opt || {}
-        pkt.payload = fn_encode
-          ? await fn_encode(msg)
-          : JSON.stringify(msg)
-
-  if pub_opt ::
-    if pub_opt.props ::
-      pkt.props = pub_opt.props
-    if pub_opt.xform ::
-      pkt = pub_opt.xform(pkt) || pkt
-
-  return self._send @ 'publish', pkt,
-    pkt.qos ? pkt : void 0 // key
-
-::
-  Object.assign @ _pub, @{}
-    m: (self, topic, payload, pub_opt) =>
-      _pub(self, {topic, payload, qos:0}, pub_opt)
-    mq: (self, topic, payload, pub_opt) =>
-      _pub(self, {topic, payload, qos:1}, pub_opt)
-    mqr: (self, topic, payload, pub_opt) =>
-      _pub(self, {topic, payload, qos:1, retain: 1}, pub_opt)
-
-    o: (self, topic, msg, pub_opt) =>
-      _pub(self, {topic, msg, arg: 'msg', qos:0}, pub_opt)
-    oq: (self, topic, msg, pub_opt) =>
-      _pub(self, {topic, msg, arg: 'msg', qos:1}, pub_opt)
-    oqr: (self, topic, msg, pub_opt) =>
-      _pub(self, {topic, msg, arg: 'msg', qos:1, retain: 1}, pub_opt)
 
