@@ -56,7 +56,7 @@ export class MQTTBase ::
     return this._send('auth', pkt, 'auth')
 
   ping() :: return this._send('pingreq', null, 'pingresp')
-
+  puback({pkt_id}) :: return this._send('puback', {pkt_id})
 
   // alias: sub
   subscribe(pkt, ex, topic_prefix) ::
