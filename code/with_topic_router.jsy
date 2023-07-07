@@ -14,29 +14,37 @@ export const with_topic_router = mqtt_topic_router =>
       return super._aliases() +
         ' sub_topic:subscribe_topic unsub_topic:unsubscribe_topic'
 
-    _init_router(opt, client, target) ::
+    _init_router(opt, self, target) ::
+      this._subs = []
       let router = this.router = target.router =
-        mqtt_topic_router(opt, this)
+        mqtt_topic_router(opt, this, target)
       return router?.invoke
-    get on_topic() :: return this.router.add
 
-    _sub_chain(topic, ex, topic_prefix) ::
-      let res = this.subscribe @ [[ topic ]], ex, topic_prefix
-      let subs = this.subs || @ this.subs = new Map()
-      subs.set @ (res.topic = topic), (subs.last = res)
-      return this // fluent api -- return this and track side effects
+    on_sub(suback, pkt) ::
+      suback.pkt = pkt
+      this._subs.push(suback)
+      return suback
+    subs_settled() ::
+      return Promise.allSettled @
+        this._subs.splice(0,Infinity)
 
     // alias: sub_topic
     subscribe_topic(topic_route, ...args) ::
       let router = this.router
       router.add @ topic_route, true, args.pop() // handler
       let topic = router.mqtt_topic(topic_route)
-      return this._sub_chain @ topic, ...args // ex, topic_prefix
+      this.subscribe @ topic, ...args // ex, topic_prefix
+      return this // fluent api -- return this and track side effects
 
     // alias: unsub_topic
     unsubscribe_topic(topic_route, ...args) ::
       let router = this.router
       router.remove @ topic_route, true
       let topic = router.mqtt_topic(topic_route)
-      return this.unsubscribe @ [[ topic ]], ...args // topic_prefix
+      return this.unsubscribe @ topic, ...args // topic_prefix
+
+    // add topic handlers without corresponding subscribe packet
+    on_topic(...args) ::
+      this.router.add(...args)
+      return this
 

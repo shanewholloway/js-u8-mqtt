@@ -11,7 +11,7 @@ export const with_topic_path_router = /* #__PURE__ */
 const mqtt_topic = topic_route =>
   topic_route
     .replace @ /[*].*$/, '#'
-    .replace @ /:\w+\??/g, '+'
+    .replace @ /:\w[^\/]*/g, '+'
 
 /* From the [MQTT v5 Spec](https://docs.oasis-open.org/mqtt/mqtt/v5.0/os/mqtt-v5.0-os.html#_Topic_Names_and)
 4.7.1.2 Multi-level wildcard -- (‘#’ U+0023)
@@ -41,9 +41,8 @@ function mqtt_topic_path_router() ::
       let priority = args.pop()
 
       if 'function' !== typeof fn ::
-        if false === fn ::
-          fn = _ignore
-        else throw new TypeError()
+        if fn :: throw new TypeError()
+        fn = _ignore
 
       let rte = _rxp_parse @ as_topic_path @ topic_route
 
@@ -59,7 +58,7 @@ function mqtt_topic_path_router() ::
     clear(priority) ::
       pri_lsts[priority ? 0 : 1] = []
       if null == priority ::
-        pri_lsts[1] = []
+        pri_lsts[1] = [] // null clears both lists
 
     async invoke(pkt, ctx) ::
       ctx.idx = 0
@@ -75,51 +74,33 @@ function mqtt_topic_path_router() ::
           break
         else ctx.idx++
 
-      let {pkt_id, qos} = pkt
-      if 1 === qos ::
-        await ctx.mqtt._send('puback', {pkt_id})
+      if 1 === pkt.qos ::
+        await ctx.mqtt.puback(pkt)
 
 
 function * _routes_iter(all_route_lists, topic) ::
+  topic = topic.replace(/^[\/]*/, '/') // ensure '/' prefix for regexparam library
   for let route_list of all_route_lists ::
-    for let route of route_list ::
-      let res = _route_match_one(topic, route)
-      if undefined !== res ::
-        yield res
-
-
-function _route_match_one(topic, {keys, pattern, tgt}) ::
-  let match = '/' !== topic[0]
-    ? pattern.exec('/'+topic)
-    : pattern.exec(topic)
-
-  if null === match ::
-    return
-
-  if false === keys ::
-    let {groups} = match
-    if ! groups ::
-      return [tgt]
-
-    let params = {}
-    for let k in groups ::
-      params[k] = groups[k]
-
-    return [tgt, params]
-
-  if 0 === keys.length ::
-    return [tgt]
-
-  let params = {}
-  for let i=0; i<keys.length; i++ ::
-    params[ keys[i] ] = match[1+i]
-  return [tgt, params]
+    for let {keys, pattern, tgt} of route_list ::
+      let match = pattern.exec(topic)
+      if match ::
+        let params = keys
+          ? keys.reduce @
+              (o, k, i) => (o[k] = match[1+i], o)
+              {}
+          : match.groups ?? match
+        yield [tgt, params]
 
 
 function _route_remove(all_route_lists, query) ::
-  let match = route => route===query || route.tgt===query || route.key===query
+  let fn_match = route => @
+    route===query
+    || route.tgt===query
+    || route.key===query
   for let lst of all_route_lists ::
-    let i = lst.findIndex(match)
-    if 0 <= i :: return !! lst.splice(i,1)
+    let i = lst.findIndex(fn_match)
+    if 0 <= i ::
+      lst.splice(i,1)
+      return true
   return false
 

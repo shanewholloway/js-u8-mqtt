@@ -68,7 +68,8 @@ export class MQTTBase ::
   // alias: sub
   subscribe(pkt, ex, topic_prefix) ::
     pkt = _as_topics(pkt, ex, topic_prefix)
-    return this._send('subscribe', pkt, pkt)
+    let suback = this._send('subscribe', pkt, pkt)
+    return this.on_sub?.(suback, pkt) ?? suback
 
   // alias: unsub
   unsubscribe(pkt, ex, topic_prefix) ::
