@@ -38,13 +38,16 @@ export class MQTTCore extends MQTTBase ::
 
   #IF PLAT_WEB
     sess_client_id(parts) ::
-      let key = parts.join('\x20')
+      let key = parts.join(' ')
       let cid = sessionStorage.getItem(key)
       if null == cid ::
         cid = this.new_client_id(parts)
         sessionStorage.setItem(key, cid)
       return cid
 
+
+  //on_error(err, evt) ::
+  //  console.warn @ '[[u8-mqtt error: %s]]', evt, err
 
   //log_conn(evt, arg, err_arg) ::
   //  console.info @ '[[u8-mqtt log: %s]]', evt, arg, err_arg
@@ -121,7 +124,6 @@ export class MQTTCore extends MQTTBase ::
   #IF PLAT_NODEJS
     with_tcp(...opt) ::
       opt = this._conn_opt(opt)
-      console.log @: opt
       return this._use_conn @=>
         this.with_stream @
           tcp_connect(opt)

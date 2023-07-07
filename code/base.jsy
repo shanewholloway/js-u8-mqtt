@@ -21,16 +21,15 @@ export class MQTTBase ::
   async conn_emit(evt, arg, err_arg) ::
     this.log_conn?.(evt, arg, err_arg)
     try ::
-      let fn_evt = this[await evt] // microtask break
+      let fn_evt = this[await evt] // microtask break using `await evt`
       if fn_evt ::
         await fn_evt.call(this, this, arg, err_arg)
-      else if err_arg ::
-        await this.on_error(err_arg, evt)
+      else if err_arg :: throw err_arg
     catch err ::
       this.on_error(err, evt)
 
-  on_error(err, err_path) ::
-    console.warn @ '[[u8-mqtt error: %s]]', err_path, err
+  on_error(err, evt) ::
+    console.warn @ '[[u8-mqtt error: %s]]', evt, err
 
   // Handshaking Packets
 
