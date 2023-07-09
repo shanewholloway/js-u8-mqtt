@@ -42,7 +42,7 @@
     "roap": "^0.5.15",
     "rollup": "^3.26.2",
     "rollup-plugin-dgnotify": "^0.1.8",
-    "rollup-plugin-jsy": "^1.8.1",
+    "rollup-plugin-jsy": "^1.9.1",
     "u8-mqtt-packet": "^0.3.2"
   },
   "scripts": {
