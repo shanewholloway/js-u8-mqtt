@@ -140,8 +140,8 @@ export class MQTTBase ::
 
   static _once_(self=this) ::
     self._once_ = _=>0
-    self.MQTTError = MQTTError
     let p = self.prototype
+    p.MQTTError = MQTTError
     for let alias of self._aliases().split(/\s+/) ::
       alias = alias.split(':')
       let fn = alias[1] && p[alias[1]]
