@@ -20,30 +20,15 @@ export class MQTTCore extends MQTTBase ::
 
 
   // automatic Client Id for connect()
-  init_client_id(parts=['u8-mqtt--', '']) ::
-    let cid = this.client_id
-
-    if undefined === cid ::
-      this.client_id = cid = (
-        #IF PLAT_WEB
-          this.sess_client_id(parts)
-        #ELSE
-          this.new_client_id(parts)
-        )
-
+  init_client_id(parts=['u8-mqtt--','']) ::
+    let sess_stg=this.sess_stg
+    let key, cid = sess_stg?.getItem(key=parts.join(' '))
+    if ! cid ::
+      cid = parts.join @ Math.random().toString(36).slice(2)
+      sess_stg?.setItem(key, cid)
     return cid
 
-  new_client_id(parts) ::
-    return [parts[0], Math.random().toString(36).slice(2), parts[1]].join('')
-
-  #IF PLAT_WEB
-    sess_client_id(parts) ::
-      let key = parts.join(' ')
-      let cid = sessionStorage.getItem(key)
-      if null == cid ::
-        cid = this.new_client_id(parts)
-        sessionStorage.setItem(key, cid)
-      return cid
+  get sess_stg() :: return globalThis.sessionStorage
 
 
   //on_error(err, evt) ::

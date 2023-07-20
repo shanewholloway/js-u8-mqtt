@@ -15,12 +15,9 @@
 
 <body>
 <main>
-  <h1>u8-mqtt <small>(web-cdn) <a href='./web-dev.html'>switch</a></small></h1>
-  <small>
-    
-  </small>
+  <h1>u8-mqtt <small>(web-dev local, <a href='./web-cdn.html'>switch</a>)</small></h1>
 
-  <div class='btn-group' style='display: flex; gap: 0.5em'>
+  <div class='btn-group'>
     <button data-topic="apple">Send apple message</button>
     <button data-topic="chili">Send chili message</button>
     <button data-topic="onion">Send onion message</button>
@@ -58,9 +55,9 @@
 
 
 <script type=module>
-  // import mqtt_client from 'https://cdn.jsdelivr.net/npm/u8-mqtt/esm/web/v4.min.js'
-  // import mqtt_client from 'https://cdn.jsdelivr.net/npm/u8-mqtt/esm/web/v5.min.js'
-  import mqtt_client from 'https://cdn.jsdelivr.net/npm/u8-mqtt/esm/web/index.js'
+  // import mqtt_client from '/esm/web/v4.min.js'
+  // import mqtt_client from '/esm/web/v5.min.js'
+  import mqtt_client from '/esm/web/index.js'
 
   let my_mqtt = mqtt_client()
     .with_websock('wss://test.mosquitto.org:8081')
