@@ -18,6 +18,9 @@ const _cfg_ = {
   external: id => /^\w*:/.test(id),
   plugins: _rpis_({}) }
 
+const cfg_core = { ..._cfg_,
+  plugins: _rpis_({}) }
+
 const cfg_nodejs = { ..._cfg_,
   plugins: _rpis_({PLAT_NODEJS: true}) }
 
@@ -44,6 +47,10 @@ export default [
 
 function * add_entrypoint(src_name, opt={}) {
   const input = `code/${src_name}.js`
+
+  if (cfg_core)
+    yield ({ ... cfg_core, input,
+      output: { file: `esm/${src_name}.js`, format: 'es', sourcemap: true } })
 
   if (cfg_nodejs)
     yield ({ ... cfg_nodejs, input, output: [
