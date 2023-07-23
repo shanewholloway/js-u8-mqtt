@@ -1,8 +1,11 @@
-# u8-mqtt
+# [u8-mqtt ![npm published version][img-npm-ver]][npm-u8-mqtt] [![][img-deps] ![][img-treeshake] ![][img-min] ![][img-minzip]][bundlephobia-u8-mqtt]
 
 A JavaScript MQTT client using async/await support QOS-0 and QOS-1.
-Zero external dependencies. [Tree-shaking friendly](https://rollupjs.org/guide/en/).
-Suited for use in modern ES6 environments: the Browser, [NodeJS](https://nodejs.org/en/), and [Deno](https://deno.land/).
+for use in modern ES6 environments: the Browser, [NodeJS](https://nodejs.org/en/), and [Deno](https://deno.land/).
+
+- Zero external dependencies.
+- [Small bundle][bundlephobia-u8-mqtt] footprint. 
+- [Tree-shaking](https://rollupjs.org/guide/en/) friendly.
 
 Use ExpressJS-like router to handle publish messages for matching topics.
 
@@ -17,6 +20,14 @@ Use ExpressJS-like router to handle publish messages for matching topics.
 
  [u8-mqtt-packet]: https://github.com/shanewholloway/js-u8-mqtt-packet
  [regexparam]: https://github.com/lukeed/regexparam#readme 
+
+ [npm-u8-mqtt]: https://www.npmjs.com/package/u8-mqtt
+ [bundlephobia-u8-mqtt]: https://bundlephobia.com/package/u8-mqtt
+ [img-npm-ver]: https://badgen.net/npm/v/u8-mqtt
+ [img-min]: https://badgen.net/bundlephobia/min/u8-mqtt
+ [img-minzip]: https://badgen.net/bundlephobia/minzip/u8-mqtt
+ [img-deps]: https://badgen.net/bundlephobia/dependency-count/u8-mqtt
+ [img-treeshake]: https://badgen.net/bundlephobia/tree-shaking/u8-mqtt
 
 
 ## Docs
@@ -67,7 +78,8 @@ await my_mqtt.json_send(
 
 ## Module size
 
-Built for small footprint with ES Modules (ESM) using embedded [u8-mqtt-packet][] and [regexparam][] libraries.
+Built for small bundle footprint with ES Modules (ESM) using embedded [u8-mqtt-packet][] and [regexparam][] libraries.
+(See [BundlePhobia][bundlephobia-u8-mqtt] page)
 
 | module                  |   brotli | minified |
 |:------------------------|---------:|---------:|
@@ -75,7 +87,8 @@ Built for small footprint with ES Modules (ESM) using embedded [u8-mqtt-packet][
 | `u8-mqtt/esm/v5.min.js` |   6504 B |  19789 B |
 | `u8-mqtt/esm/v4.min.js` |   5420 B |  15379 B |
 
-[automated sizing report](./docs/compressed.md)
+([automated sizing report](./docs/compressed.md))
+
 
 #### MQTT Client sizes
 
@@ -93,7 +106,11 @@ Built for small footprint with ES Modules (ESM) using embedded [u8-mqtt-packet][
 
 ## Prior Art
 
-The `u8-mqtt` project was inspired by [mqtt](https://github.com/mqttjs/MQTT.js#readme) and [mqtt-packet](https://github.com/mqttjs/mqtt-packet) written for NodeJS. The codecs of those project are written with a NodeJS ecosystem in mind: Buffer, EventEmitter, Streams.
+The `u8-mqtt` project was inspired by [mqtt](orig-mqtt) and [mqtt-packet](orig-mqtt-packet) written for NodeJS.
+The codecs of those project are written with a NodeJS ecosystem in mind: Buffer, EventEmitter, Streams.
+
+ [orig-mqtt]: https://github.com/mqttjs/MQTT.js#readme
+ [orig-mqtt-packet]: https://github.com/mqttjs/mqtt-packet#readme
 
 
 ## License
