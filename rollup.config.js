@@ -5,9 +5,9 @@ import rpi_terser from '@rollup/plugin-terser'
 import rpi_virtual from '@rollup/plugin-virtual'
 import pkg from './package.json' assert {type: 'json'}
 
-const _rpis_ = (defines, ...args) => [
+const _rpis_ = (tag, defines, ...args) => [
   rpi_virtual({
-    'code/version.js': `export const version = '${pkg.version}'`,
+    'code/version.js': `export const version = '${pkg.version}${tag || ''}'`,
   }),
   rpi_jsy({defines}),
   rpi_resolve(),
@@ -16,23 +16,23 @@ const _rpis_ = (defines, ...args) => [
 
 const _cfg_ = {
   external: id => /^\w*:/.test(id),
-  plugins: _rpis_({}) }
+  plugins: _rpis_(null, {}) }
 
 const cfg_core = { ..._cfg_,
-  plugins: _rpis_({}) }
+  plugins: _rpis_(null, {}) }
 
 const cfg_nodejs = { ..._cfg_,
-  plugins: _rpis_({PLAT_NODEJS: true}) }
+  plugins: _rpis_('-node', {PLAT_NODEJS: true}) }
 
 const cfg_deno = { ..._cfg_,
-  plugins: _rpis_({PLAT_DENO: true}) }
+  plugins: _rpis_('-deno', {PLAT_DENO: true}) }
 
 const cfg_web = { ..._cfg_,
-  plugins: _rpis_({PLAT_WEB: true}) }
+  plugins: _rpis_('-web', {PLAT_WEB: true}) }
 
 let is_watch = process.argv.includes('--watch')
 const cfg_web_min = is_watch ? null : { ... cfg_web,
-  plugins: _rpis_({PLAT_WEB: true}, rpi_terser()) }
+  plugins: _rpis_('-web', {PLAT_WEB: true}, rpi_terser()) }
 
 
 
