@@ -26,8 +26,13 @@
       "deno": "./esm/deno/index.js",
       "node": "./esm/node/index.js",
       "require": "./cjs/index.cjs"
-    }
+    },
+    "import": "./esm/node/index.mjs",
+    "require": "./cjs/index.cjs"
+    "default": "./esm/node/index.js"
   },
+  "main: "./cjs/index.cjs",
+  "module": "./esm/node/index.mjs",
   "workspaces": [
     "demo",
     "test"
