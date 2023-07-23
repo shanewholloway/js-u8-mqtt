@@ -31,7 +31,7 @@
     "require": "./cjs/index.cjs"
     "default": "./esm/node/index.js"
   },
-  "main: "./cjs/index.cjs",
+  "main": "./cjs/index.cjs",
   "module": "./esm/node/index.mjs",
   "workspaces": [
     "demo",
