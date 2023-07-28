@@ -41,7 +41,11 @@ export class MQTTCore extends MQTTBase ::
     if is_reconnect ::
       return client.connect()
 
-  //on_reconnect(client) ::
+  // on_ready(client) ::
+  // on_reconnect(client) ::
+  on_disconnect(client, intentional) ::
+    if ! intentional ::
+      return client.on_reconnect?.()
 
   _use_conn(fn_reconnect) ::
     return (this.reconnect = fn_reconnect)?.()
@@ -52,10 +56,6 @@ export class MQTTCore extends MQTTBase ::
         this.delay(opt.delay || 2000)
           .then(this.reconnect)
           .then(opt.reconnect, opt.error)
-
-  on_disconnect(client, intentional) ::
-    if ! intentional ::
-      return client.on_reconnect?.()
 
   delay(ms) ::
     return new Promise @ done => setTimeout(done, ms)
