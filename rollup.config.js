@@ -40,6 +40,8 @@ export default [
   ... add_entrypoint('index'),
   ... add_entrypoint('v4'),
   ... add_entrypoint('v5'),
+  ... add_entrypoint('full-v4'),
+  ... add_entrypoint('full-v5'),
   ... add_entrypoint('basic-v4'),
   ... add_entrypoint('basic-v5'),
 ]
