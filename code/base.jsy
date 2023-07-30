@@ -34,10 +34,10 @@ export class MQTTBase ::
   // Handshaking Packets
 
   async connect(pkt={}) ::
-    let cid = pkt.client_id || this.client_id
+    let cid = pkt.client_id
     if 'string' !== typeof cid ::
       // see init_client_id implementation in core.jsy
-      pkt.client_id = cid = this.init_client_id(cid)
+      pkt.client_id = cid = this.client_id || this.init_client_id(cid)
     this.client_id = cid
 
     if null == pkt.keep_alive ::
