@@ -15,7 +15,7 @@ async function on_live(my_mqtt) {
         `u8-mqtt-demo/demo-${(+ts).toString(36)}`, {ts},
         {props: { message_expiry_interval: 0|(Math.random()*120 + 30) }})
 
-      console.log("RES", res)
+      console.log("RES", res[0])
       await new Promise(done => setTimeout(done, 2000))
     }
   } catch (err) {

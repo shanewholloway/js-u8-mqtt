@@ -17,7 +17,7 @@ async function on_live(my_mqtt) {
       let ts = new Date()
       let res = await my_mqtt.json_store(topic, {ts}, pub_opt)
 
-      console.log("RES", res)
+      console.log("RES", res[0])
       await new Promise(done => setTimeout(done, 2000))
     }
   } catch (err) {
