@@ -11,7 +11,7 @@ export class MQTTBase ::
   constructor(opt={}) ::
     this.with(opt)
     this._conn_ = _mqtt_conn @ this,
-      this._init_dispatch(opt, this)
+      this._init_dispatch(opt)
 
   with(fns_ns) ::
     for let [k,v] of Object.entries(fns_ns) ::
@@ -133,7 +133,7 @@ export class MQTTBase ::
     let target = @{} __proto__: opt.on_mqtt_type
     target.mqtt_publish ||=
       this._init_router?.(opt, this, target)
-    return _mqtt_dispatch(this, target)
+    return _mqtt_dispatch(opt, target)
 
   static _aliases() ::
     return ' publish:pub sub:subscribe unsub:unsubscribe json_post:obj_post json_send:obj_send json_store:obj_store'

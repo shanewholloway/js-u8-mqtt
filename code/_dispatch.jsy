@@ -1,39 +1,47 @@
-import {_mqtt_cmdid_dispatch} from './_cmdid_dispatch.jsy'
-
-/*
-on_mqtt_type = {
-  mqtt_auth(pkt, ctx) ::
-  mqtt_connect(pkt, ctx) ::
-  mqtt_connack(pkt, ctx) ::
-  mqtt_disconnect(pkt, ctx) ::
-
-  mqtt_publish(pkt, ctx)
-  mqtt_subscribe(pkt, ctx) ::
-  mqtt_unsubscribe(pkt, ctx) ::
-
-  mqtt_pingreq(pkt, ctx) ::
-  mqtt_pingresp(pkt, ctx) ::
-}
-*/
+import {_mqtt_cmdids} from './_cmdid_dispatch.jsy'
 
 export function _mqtt_dispatch(opt, target) ::
-  let _disp_ = _mqtt_cmdid_dispatch.create(target)
-  let { cmdids } = _disp_
-
+  let hashbelt=[], rotate_ts=0
   // default rotate at 1s across 5 buckets
-  let { td: rotate_td=1000, n: rotate_n=5 } =
-    opt && opt.rotate || {}
+  let { td: rotate_td=1000, n: rotate_n=5 } = opt?.rotate || {}
 
-  let rotate_ts = rotate_td + Date.now()
+  // Promise / future scaffolding
+  let _pkt_id=100, _ftr_key // use _ftr_key to reuse _by_key closure
+  let _ftr_by_key = fn_answer => hashbelt[0].set(_ftr_key, fn_answer)
 
-  return @[] on_mqtt,
-    _disp_.bind_pkt_future()
+  on_mqtt([]) // init hashbelt and rotate_ts
+  return [on_mqtt, pkt_future]
+
+
+  function pkt_future(pkt_or_key) ::
+    if 'string' !== typeof pkt_or_key ::
+      _pkt_id = (_pkt_id + 1) & 0xffff // 16-bit unsigned short
+      _ftr_key = pkt_or_key.pkt_id = _pkt_id
+    else ::
+      _ftr_key = pkt_or_key
+
+    return new Promise(_ftr_by_key)
+
+  function answer(key, pkt) ::
+    for let map of hashbelt ::
+      let fn_answer = map.get(key)
+      if fn_answer ::
+        map.delete(key)
+
+        fn_answer([pkt, /*err*/]) // option/maybe monad
+        return true
+    return false
 
   function on_mqtt(pkt_list, ctx) ::
     for let pkt of pkt_list ::
-      cmdids[pkt.id] @ _disp_, pkt, ctx
+      _mqtt_cmdids[pkt.id](target, answer, pkt, ctx)
 
-    if Date.now() > rotate_ts ::
-      _disp_.rotate_belt(rotate_n)
-      rotate_ts = rotate_td + Date.now()
+    // rotate after rotate_ts
+    let now = Date.now()
+    if now > rotate_ts ::
+      rotate_ts = rotate_td + now
+      hashbelt.unshift(new Map())
+      while hashbelt.length > rotate_n ::
+        for let fn_answer of hashbelt.pop().values() ::
+          fn_answer([/*pkt*/, 'expired']) // option/maybe monad
 

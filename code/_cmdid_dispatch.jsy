@@ -1,71 +1,47 @@
 
-export const _mqtt_cmdid_dispatch = @{}
-  create(target) ::
-    return @{} __proto__: this, target, hashbelt: [new Map()]
+async function _by_evt(target, answer, pkt, ctx) ::
+  /* target : on_mqtt_type = {
+        mqtt_pkt(pkt, ctx) {}, // generic
 
-  bind_pkt_future(_pkt_id=100) ::
-    let {hashbelt} = this
+        mqtt_auth(pkt, ctx) {},
+        mqtt_connect(pkt, ctx) {},
+        mqtt_connack(pkt, ctx) {},
+        mqtt_disconnect(pkt, ctx) {},
 
-    let _tmp_ // use _tmp_ to reuse _by_key closure
-    let _by_key = answer_monad =>
-      hashbelt[0].set(_tmp_, answer_monad)
+        mqtt_publish(pkt, ctx) {},
+        mqtt_subscribe(pkt, ctx) {},
+        mqtt_unsubscribe(pkt, ctx) {},
 
-    return @\ pkt_or_key ::
-      if 'string' === typeof pkt_or_key ::
-        _tmp_ = pkt_or_key
-      else ::
-        _pkt_id = (_pkt_id + 1) & 0xffff
-        _tmp_ = pkt_or_key.pkt_id = _pkt_id
+        mqtt_pingreq(pkt, ctx) {},
+        mqtt_pingresp(pkt, ctx) {},
+    } */
 
-      return new Promise(_by_key)
+  let pkt_fn = target[`mqtt_${pkt.type}`] || target.mqtt_pkt
+  await pkt_fn?.call(target, pkt, ctx)
 
-  answer(key, pkt) ::
-    for let map of this.hashbelt ::
-      let answer_monad = map.get(key)
-      if undefined !== answer_monad ::
-        map.delete(key)
+function _by_type(target, answer, pkt, ctx) ::
+  answer(pkt.type, pkt)
+  _by_evt(target, answer, pkt, ctx)
 
-        answer_monad([pkt, /*err*/]) // option/maybe monad
-        return true
-    return false
-
-  rotate_belt(n) ::
-    let {hashbelt} = this
-    hashbelt.unshift @ new Map()
-    for let old of hashbelt.splice(n || 5) ::
-      for let answer_monad of old.values() ::
-        answer_monad([/*pkt*/, 'expired']) // option/maybe monad
-
-  cmdids: @!
-    return @[]
-      @=>{}    // 0x0 reserved
-      by_evt   // 0x1 connect
-      by_type  // 0x2 connack
-      by_evt   // 0x3 publish
-      by_id    // 0x4 puback
-      by_id    // 0x5 pubrec
-      by_id    // 0x6 pubrel
-      by_id    // 0x7 pubcomp
-      by_evt   // 0x8 subscribe
-      by_id    // 0x9 suback
-      by_evt   // 0xa unsubscribe
-      by_id    // 0xb unsuback
-      by_type  // 0xc pingreq
-      by_type  // 0xd pingresp
-      by_evt   // 0xe disconnect
-      by_type  // 0xf auth
+function _by_id(target, answer, pkt) ::
+  answer(pkt.pkt_id, pkt)
 
 
-    function by_id(disp, pkt) ::
-      disp.answer @ pkt.pkt_id, pkt
-
-    function by_type(disp, pkt, ctx) ::
-      disp.answer @ pkt.type, pkt
-      by_evt(disp, pkt, ctx)
-
-    async function by_evt({target}, pkt, ctx) ::
-      let fn = target[`mqtt_${pkt.type}`]
-        || target.mqtt_pkt
-
-      await fn?.call(target, pkt, ctx)
+export const _mqtt_cmdids = @[]
+  _ => {}    // 0x0 reserved
+  _by_evt   // 0x1 connect
+  _by_type  // 0x2 connack
+  _by_evt   // 0x3 publish
+  _by_id    // 0x4 puback
+  _by_id    // 0x5 pubrec
+  _by_id    // 0x6 pubrel
+  _by_id    // 0x7 pubcomp
+  _by_evt   // 0x8 subscribe
+  _by_id    // 0x9 suback
+  _by_evt   // 0xa unsubscribe
+  _by_id    // 0xb unsuback
+  _by_type  // 0xc pingreq
+  _by_type  // 0xd pingresp
+  _by_evt   // 0xe disconnect
+  _by_type  // 0xf auth
 
