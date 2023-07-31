@@ -1,5 +1,6 @@
 import mqtt_pkt_ctx from 'u8-mqtt-packet/esm/codec_bind.js'
 import { MQTTBase } from './base.jsy'
+import { _mqtt_conn } from './_conn.jsy'
 
 #IF PLAT_NODEJS
   import {connect as tcp_connect} from 'node:net'
@@ -12,11 +13,37 @@ const pkt_api = {
 }
 
 export class MQTTCore extends MQTTBase ::
+  constructor(opt={}) ::
+    super()
+    this.with(opt)
+    this.conn = _mqtt_conn @ this,
+      this._init_dispatch(opt)
+
+  with(fns_ns) ::
+    for let [k,v] of Object.entries(fns_ns) ::
+      if 'function' === typeof v :: this[k] = v
+    return this
+
+
   static mqtt_ctx(mqtt_level, mqtt_opts, pkt_ctx=pkt_api) ::
     let self = class extends this {}
     self.prototype.mqtt_ctx =
       mqtt_pkt_ctx(mqtt_level, mqtt_opts, pkt_ctx)
     return self
+
+
+  async conn_emit(evt, arg, err_arg) ::
+    this.log_conn?.(evt, arg, err_arg)
+    try ::
+      let fn_evt = this[await evt] // microtask break using `await evt`
+      if fn_evt ::
+        await fn_evt.call(this, this, arg, err_arg)
+      else if err_arg :: throw err_arg
+    catch err ::
+      this.on_error(err, evt)
+
+  on_error(err, evt) ::
+    console.warn @ '[[u8-mqtt error: %s]]', evt, err
 
 
   // automatic Client Id for connect()
@@ -61,7 +88,7 @@ export class MQTTCore extends MQTTBase ::
     return new Promise @ done => setTimeout(done, ms)
 
   with_async_iter(async_iter, write_u8_pkt) ::
-    let on_mqtt_chunk = this._conn_.set @
+    let on_mqtt_chunk = this.conn.set @
       this.mqtt_ctx,
       write_u8_pkt
 
@@ -70,9 +97,9 @@ export class MQTTCore extends MQTTBase ::
         async_iter = await async_iter
         for await (let chunk of async_iter)
           on_mqtt_chunk(chunk)
-        this._conn_.reset()
+        this.conn.reset()
       catch err ::
-        this._conn_.reset(err)
+        this.conn.reset(err)
 
     return this
 
@@ -152,8 +179,8 @@ export class MQTTCore extends MQTTBase ::
       ready = new Promise @ fn => websock.onopen = fn
 
 
-    let {_conn_} = this
-    let on_mqtt_chunk = _conn_.set @
+    let {conn} = this
+    let on_mqtt_chunk = conn.set @
       this.mqtt_ctx,
       async u8_pkt => @
         await ready
@@ -166,7 +193,7 @@ export class MQTTCore extends MQTTBase ::
         err.code = evt.code
         err.reason = evt.reason
 
-      _conn_.reset(err)
+      conn.reset(err)
 
     return this
 

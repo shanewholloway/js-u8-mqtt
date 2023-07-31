@@ -1,5 +1,4 @@
-import {_mqtt_conn} from './_conn.jsy'
-import {_mqtt_dispatch} from './_dispatch.jsy'
+import { _mqtt_dispatch } from './_dispatch.jsy'
 
 export class MQTTError extends Error ::
   constructor(mqtt_pkt, reason=mqtt_pkt.reason) ::
@@ -8,31 +7,7 @@ export class MQTTError extends Error ::
     this.reason = reason
 
 export class MQTTBase ::
-  constructor(opt={}) ::
-    this.with(opt)
-    this._conn_ = _mqtt_conn @ this,
-      this._init_dispatch(opt)
-
-  with(fns_ns) ::
-    for let [k,v] of Object.entries(fns_ns) ::
-      if 'function' === typeof v :: this[k] = v
-    return this
-
-  async conn_emit(evt, arg, err_arg) ::
-    this.log_conn?.(evt, arg, err_arg)
-    try ::
-      let fn_evt = this[await evt] // microtask break using `await evt`
-      if fn_evt ::
-        await fn_evt.call(this, this, arg, err_arg)
-      else if err_arg :: throw err_arg
-    catch err ::
-      this.on_error(err, evt)
-
-  on_error(err, evt) ::
-    console.warn @ '[[u8-mqtt error: %s]]', evt, err
-
   // Handshaking Packets
-
   async connect(pkt={}) ::
     let cid = pkt.client_id
     if 'string' !== typeof cid ::
@@ -43,19 +18,19 @@ export class MQTTBase ::
     if null == pkt.keep_alive ::
       pkt.keep_alive = 60
 
-    let res = await this._conn_
+    let res = await this.conn
       .send_connect('connect', pkt, 'connack')
 
     if 0 != res[0].reason ::
       throw new this.MQTTError(res[0])
 
     // TODO: merge with server's keep_alive frequency
-    this._conn_.ping(pkt.keep_alive)
+    this.conn.ping(pkt.keep_alive)
     return res
 
   async disconnect(pkt={}) ::
     let res = await this._send('disconnect', pkt)
-    this._conn_.reset(false)
+    this.conn.reset(false)
     return res
 
   auth(pkt={}) ::
@@ -126,7 +101,7 @@ export class MQTTBase ::
 
   // Internal API
 
-  /* async _send(type, pkt) -- provided by _conn_ and transport */
+  /* async _send(type, pkt) -- provided by conn and transport */
 
   _init_dispatch(opt) ::
     this.constructor?._once_()

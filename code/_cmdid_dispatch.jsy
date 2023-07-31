@@ -1,5 +1,5 @@
 
-async function _by_evt(target, answer, pkt, ctx) ::
+async function _mqtt_cmd_evt(target, answer, pkt, ctx) ::
   /* target : on_mqtt_type = {
         mqtt_pkt(pkt, ctx) {}, // generic
 
@@ -19,29 +19,29 @@ async function _by_evt(target, answer, pkt, ctx) ::
   let pkt_fn = target[`mqtt_${pkt.type}`] || target.mqtt_pkt
   await pkt_fn?.call(target, pkt, ctx)
 
-function _by_type(target, answer, pkt, ctx) ::
+function _mqtt_cmd_type(target, answer, pkt, ctx) ::
   answer(pkt.type, pkt)
-  _by_evt(target, answer, pkt, ctx)
+  _mqtt_cmd_evt(target, answer, pkt, ctx)
 
-function _by_id(target, answer, pkt) ::
+function _mqtt_cmd_id(target, answer, pkt) ::
   answer(pkt.pkt_id, pkt)
 
 
 export const _mqtt_cmdids = @[]
   _ => {}    // 0x0 reserved
-  _by_evt   // 0x1 connect
-  _by_type  // 0x2 connack
-  _by_evt   // 0x3 publish
-  _by_id    // 0x4 puback
-  _by_id    // 0x5 pubrec
-  _by_id    // 0x6 pubrel
-  _by_id    // 0x7 pubcomp
-  _by_evt   // 0x8 subscribe
-  _by_id    // 0x9 suback
-  _by_evt   // 0xa unsubscribe
-  _by_id    // 0xb unsuback
-  _by_type  // 0xc pingreq
-  _by_type  // 0xd pingresp
-  _by_evt   // 0xe disconnect
-  _by_type  // 0xf auth
+  _mqtt_cmd_evt   // 0x1 connect
+  _mqtt_cmd_type  // 0x2 connack
+  _mqtt_cmd_evt   // 0x3 publish
+  _mqtt_cmd_id    // 0x4 puback
+  _mqtt_cmd_id    // 0x5 pubrec
+  _mqtt_cmd_id    // 0x6 pubrel
+  _mqtt_cmd_id    // 0x7 pubcomp
+  _mqtt_cmd_evt   // 0x8 subscribe
+  _mqtt_cmd_id    // 0x9 suback
+  _mqtt_cmd_evt   // 0xa unsubscribe
+  _mqtt_cmd_id    // 0xb unsuback
+  _mqtt_cmd_type  // 0xc pingreq
+  _mqtt_cmd_type  // 0xd pingresp
+  _mqtt_cmd_evt   // 0xe disconnect
+  _mqtt_cmd_type  // 0xf auth
 
