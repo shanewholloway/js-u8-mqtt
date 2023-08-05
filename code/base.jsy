@@ -20,23 +20,20 @@ export class MQTTBase ::
     if null == pkt.keep_alive ::
       pkt.keep_alive = 60
 
-    let res = await this.conn
-      .send_connect('connect', pkt, 'connack')
-
-    if 0 != res[0].reason ::
-      throw new this.MQTTError(res[0])
-
-    // TODO: merge with server's keep_alive frequency
-    this.conn.ping(pkt.keep_alive)
-    return res
+    let response = await this._send0('connect', pkt, 'connack')
+    if 0 != response[0].reason :: // compare to 0 to coerce to number
+      throw new this.MQTTError(response[0])
+    return this.conn.on_conn(pkt, response)
 
   async disconnect(pkt={}) ::
-    let res = await this._send('disconnect', pkt)
-    this.conn.reset(false)
-    return res
+    let response = await this._send0('disconnect', pkt)
+    return this.conn.on_dis(pkt, response)
 
-  auth(pkt={}) ::
-    return this._send('auth', pkt, 'auth')
+  async auth(pkt={}) ::
+    let response = await this._send0('auth', pkt, 'auth')
+    if response[0].reason ::
+      throw new this.MQTTError(response[0])
+    return this.conn.on_auth(pkt, response)
 
   ping() :: return this._send('pingreq', null, 'pingresp')
   puback({pkt_id}) :: return this._send('puback', {pkt_id})
@@ -101,6 +98,7 @@ export class MQTTBase ::
 
   // Internal API
 
+  /* async _send0(type, pkt) -- provided by conn and transport */
   /* async _send(type, pkt) -- provided by conn and transport */
 
   _init_dispatch(opt) ::

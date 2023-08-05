@@ -1,5 +1,5 @@
-import { _isfn } from './_utils.jsy'
 import mqtt_pkt_ctx from 'u8-mqtt-packet/esm/codec_bind.js'
+import { _isfn } from './_utils.jsy'
 import { MQTTBase } from './base.jsy'
 import { _mqtt_conn } from './_conn.jsy'
 
@@ -17,11 +17,13 @@ const opt_default = @{}
 
 export class MQTTCore extends MQTTBase ::
   constructor(opt) ::
-    opt = @{} ...opt_default, ...opt
     super()
-    this.sess_stg = opt.sess_stg
     this.with(opt)
-    this.conn = _mqtt_conn @ this,
+    opt = @{} ...opt_default, ...opt
+    // settings for MQTTCore
+    this.sess_stg = opt.sess_stg
+    // setup connection and dispatch
+    this.conn = _mqtt_conn @ opt, this,
       this._init_dispatch(opt)
 
   with(fns_ns) ::
@@ -31,10 +33,10 @@ export class MQTTCore extends MQTTBase ::
 
 
   static mqtt_ctx(mqtt_level, mqtt_opts, pkt_ctx=pkt_api) ::
-    let self = class extends this {}
-    self.prototype.mqtt_ctx =
+    let klass = class extends this {}
+    klass.prototype.mqtt_ctx =
       mqtt_pkt_ctx(mqtt_level, mqtt_opts, pkt_ctx)
-    return self
+    return klass
 
 
   async conn_emit(evt, arg, err_arg) ::
@@ -49,6 +51,8 @@ export class MQTTCore extends MQTTBase ::
 
   on_error(err, evt) ::
     console.warn @ '[[u8-mqtt error: %s]]', evt, err
+  log_conn(evt, arg, err_arg) ::
+    console.info @ '[[u8-mqtt conn: %s]]', evt, arg, err_arg
 
 
   // automatic Client Id for connect()
@@ -60,12 +64,6 @@ export class MQTTCore extends MQTTBase ::
       sess_stg?.setItem(key, cid)
     return cid
 
-
-  //on_error(err, evt) ::
-  //  console.warn @ '[[u8-mqtt error: %s]]', evt, err
-
-  //log_conn(evt, arg, err_arg) ::
-  //  console.info @ '[[u8-mqtt log: %s]]', evt, arg, err_arg
 
   on_live(client, is_reconnect) ::
     if is_reconnect ::
@@ -91,19 +89,16 @@ export class MQTTCore extends MQTTBase ::
     return new Promise @ done => setTimeout(done, ms)
 
   with_async_iter(async_iter, write_u8_pkt) ::
-    let on_mqtt_chunk = this.conn.set @
-      this.mqtt_ctx,
-      write_u8_pkt
-
-    this._msg_loop = @!>
-      try ::
-        async_iter = await async_iter
-        for await (let chunk of async_iter)
-          on_mqtt_chunk(chunk)
-        this.conn.reset()
-      catch err ::
-        this.conn.reset(err)
-
+    this.conn.setup @ async_iter,
+      write_u8_pkt,
+      async (on_mqtt_chunk, conn) => ::
+        try ::
+          async_iter = await async_iter
+          for await (let chunk of async_iter)
+            on_mqtt_chunk(chunk)
+          conn.reset()
+        catch err ::
+          conn.reset(err)
     return this
 
 
@@ -122,11 +117,11 @@ export class MQTTCore extends MQTTBase ::
         this.with_deno_iter @
           Deno.connectTls(opt)
 
-    with_deno_iter(conn) ::
+    with_deno_iter(transport) ::
       return this.with_async_iter @
-        conn.then(Deno.iter),
-        async u8_pkt =>
-          (await conn).write(u8_pkt)
+        transport.then(Deno.iter),
+        transport.then @ write_stream =>
+          u8_pkt => write_stream.write(u8_pkt)
 
     _conn_opt([a0, a1, a2]) ::
       // (port, hostname, options) or (url, options)
@@ -174,29 +169,26 @@ export class MQTTCore extends MQTTBase ::
 
     websock.binaryType = 'arraybuffer'
 
-    let ready, {readyState} = websock
+    let ws_ready, readyState = websock.readyState
     if 1 !== readyState ::
       if 0 !== readyState ::
-        throw new Error @ 'Invalid WebSocket readyState'
+        throw new Error @ 'WS readyState'
 
-      ready = new Promise @ fn => websock.onopen = fn
+      ws_ready = new Promise @ ready => websock.onopen = ready
 
+    this.conn.setup @ ws_ready,
+      u8_pkt => websock.send(u8_pkt),
+      (on_mqtt_chunk, conn) => ::
+        websock.onmessage = evt => @
+          on_mqtt_chunk @ new Uint8Array(evt.data)
 
-    let {conn} = this
-    let on_mqtt_chunk = conn.set @
-      this.mqtt_ctx,
-      async u8_pkt => @
-        await ready
-        websock.send(u8_pkt)
+        websock.onclose = evt => ::
+          if ! evt.wasClean ::
+            var err = new Error('websocket close')
+            err.code = evt.code
+            err.reason = evt.reason
 
-    websock.onmessage = evt => @ on_mqtt_chunk @ new Uint8Array(evt.data)
-    websock.onclose = evt => ::
-      if ! evt.wasClean ::
-        var err = new Error('websocket connection close')
-        err.code = evt.code
-        err.reason = evt.reason
-
-      conn.reset(err)
+          conn.reset(err)
 
     return this
 

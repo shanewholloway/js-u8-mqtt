@@ -1,82 +1,106 @@
-import { ao_defer_v } from 'roap'
-export { ao_defer_v }
+import { _interval } from './_utils.jsy'
 
-export function _mqtt_conn(client, [on_mqtt, pkt_future]) ::
-  let _q_init = ao_defer_v(), _q_ready = ao_defer_v()
-  let _send_ready = async (...args) => (await _q_ready[0])(...args)
-  let _send_mqtt_pkt, _has_connected
-  client._send = _send_ready
+const _defer_obj = o => @
+  o.p = new Promise @ (a,e) => { o.a=a; o.e=e }
+  , o
 
-  return @{}
-    async when_ready() :: await _q_ready[0]
+function _dfn_reset(client, attr, fn_after) ::
+  // a resetable deferred for a function
+  let self = {set}, afn = async (...args) => (await self.p)(...args)
+  return set()
 
-    ping: _ping_interval @=> _send_mqtt_pkt?.('pingreq')
+  function set() ::
+    if afn !== client[attr] ::
+      _defer_obj(self).p.then(fn_after, _=>0)
+      client[attr] = afn
+    return self
+
+export function _mqtt_conn(opt, client, [on_mqtt, pkt_future]) ::
+  let _abort
+  let _dfn_send0 = _dfn_reset @ client, '_send0', // client._send0 getter/setter
+    _=> client.conn_emit('on_live', conn.has_connected)
+  let _dfn_ready = _dfn_reset @ client, '_send', // client._send getter/setter
+    _=> client.conn_emit('on_ready')
+  let _keep_alive_ival = _interval @=> client._send0('pingreq') // resettable interval for keep_alive ping
+
+  let conn = Object.create @:
+    ping: (td=conn.keep_alive) => _keep_alive_ival(td)
+
+    on_conn(pkt, response) ::
+      conn.has_connected = true
+      conn.keep_alive = opt.keep_alive || response[0].props?.server_keep_alive || pkt.keep_alive
+      client.conn_emit('on_conn')
+      return opt.use_auth
+        ? response // wait on enhanced authentication step
+        : conn.on_auth(null, response) // otherwise, connect is also auth
+
+    on_auth(pkt, response) ::
+      _dfn_ready.a(_dfn_send0.p)
+      if 0 != opt.keep_alive ::
+        conn.ping()
+      client.conn_emit('on_auth', !pkt)
+      return response
+
+    on_dis(pkt, response) ::
+      conn.reset(false)
+      return response
 
     reset(err) ::
-      if ! _send_mqtt_pkt :: return
-
       if err ::
-        _q_init[2](err)
+        _dfn_send0.e(err) // send error to uses of _send0 (connect, auth)
+      _abort.e(err) // abort in-progress connections
 
-      _send_mqtt_pkt = null
-      _q_init = ao_defer_v()
-      client._send = _send_ready
-
-      // call client.on_conn_reset in next promise microtask
+      delete conn.is_set
+      conn.ready = handshake()
       client.conn_emit('on_disconnect', false===err, err)
 
-    async send_connect(... args) ::
-      if ! _send_mqtt_pkt ::
-        await _q_init[0] // _send_mqtt_pkt is set before fulfilled
+    abort() ::
+      _dfn_ready.e(err) // abort all messages awaiting ready state
+      return conn.reset(err)
 
-      // await connack response
-      let res = await _send_mqtt_pkt(...args)
-      if 0 == res[0].reason ::
-        _has_connected = true
-        // resolve _q_ready[0] with _send_mqtt_pkt closure
-        _q_ready[1](client._send = _send_mqtt_pkt)
-        _q_ready = ao_defer_v()
-        client.conn_emit('on_ready')
+    async setup(gate, send_u8_pkt, init_msg_loop) ::
+      if conn.is_set ::
+        throw new Error() // already in-progress
 
-      return res
+      conn.is_set = true
+      await gate
 
-    is_set: @=> !! _send_mqtt_pkt
-    set(mqtt_ctx, send_u8_pkt) ::
-      if _send_mqtt_pkt ::
-        throw new Error('Already connected')
+      // setup send/recv MQTT parsing context
+      let mqtt_ctx = client.mqtt_ctx.mqtt_stream()
 
-      mqtt_ctx = mqtt_ctx.mqtt_stream()
-      let sess_ctx = {mqtt: client}
-      let on_mqtt_chunk = u8_buf =>
-        on_mqtt(mqtt_ctx.decode(u8_buf), sess_ctx)
+      :: // setup inbound message loop
+        let sess_ctx = {mqtt: client} // mutable session context
+        let on_mqtt_chunk = u8 => on_mqtt(mqtt_ctx.decode(u8), sess_ctx)
+        init_msg_loop(on_mqtt_chunk, conn)
 
-      _send_mqtt_pkt = async (type, pkt, key) => ::
-        let res = undefined !== key
-          ? pkt_future(key) : true
+      // setup outbound message path and transport connection
+      send_u8_pkt = await send_u8_pkt
+      _dfn_send0.a @
+        async (type, pkt, key) => ::
+          let res = undefined !== key
+            ? pkt_future(key) : true
 
-        await send_u8_pkt @
-          mqtt_ctx.encode_pkt(type, pkt)
+          await send_u8_pkt @
+            mqtt_ctx.encode_pkt(type, pkt)
+          return res
 
-        return res
+  conn.ready = handshake()
+  return conn
 
-      _q_init[1](_send_mqtt_pkt) // resolve _q_init with _send_mqtt_pkt closure
+  async function handshake() ::
+    _abort = _defer_obj({})
 
-      // call client.on_live in next promise microtask
-      client.conn_emit('on_live', _has_connected)
-      return on_mqtt_chunk
+    _keep_alive_ival(0) // clearInterval on keep alive ping
+    _dfn_send0.set() // reset client._send0 if necessary
+    _dfn_ready.set() // reset client._send if necessary
 
+    try ::
+      // set client._send0 as passtrhough after transport connection
+      client._send0 = await Promise.race @# _dfn_send0.p, _abort.p
 
-function _ping_interval(send_ping) ::
-  let tid
-  return @\ td ::
-    tid = clearInterval(tid)
-    if td ::
-      tid = setInterval(send_ping, 1000 * td)
-      #IF PLAT_DENO
-        // ensure the interval allows the Deno event loop to exit
-        Deno.unrefTimer(tid)
-      #ELSE
-        // ensure the interval allows the NodeJS event loop to exit
-        tid.unref?.()
+      // set client._send as passtrhough after ready
+      client._send = await Promise.race @# _dfn_ready.p, _abort.p
       return true
+    catch err ::
+      return false
 

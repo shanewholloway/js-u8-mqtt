@@ -1,2 +1,17 @@
 export const _isfn = v => typeof v === 'function'
 export const _isstr = v => typeof v === 'string'
+
+export function _interval(fn_callback) ::
+  let tid
+  return @\ td ::
+    tid = clearInterval(tid)
+    if td ::
+      tid = setInterval(fn_callback, 1000 * td)
+      #IF PLAT_DENO
+        // ensure the interval allows the Deno event loop to exit
+        Deno.unrefTimer(tid)
+      #ELSE
+        // ensure the interval allows the NodeJS event loop to exit
+        tid.unref?.()
+      return true
+
