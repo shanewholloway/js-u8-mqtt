@@ -1,7 +1,9 @@
+import { _isfn, _isstr } from './_utils.jsy'
 import { _mqtt_dispatch } from './_dispatch.jsy'
 
 export class MQTTError extends Error ::
   constructor(mqtt_pkt, reason=mqtt_pkt.reason) ::
+    // use hex-encoded reasons to match MQTT spec documentation
     super(`[0x${reason.toString(16)}] ${reason.reason}`)
     this.mqtt_pkt = mqtt_pkt
     this.reason = reason
@@ -10,7 +12,7 @@ export class MQTTBase ::
   // Handshaking Packets
   async connect(pkt={}) ::
     let cid = pkt.client_id
-    if 'string' !== typeof cid ::
+    if ! _isstr(cid) ::
       // see init_client_id implementation in core.jsy
       pkt.client_id = cid = this.client_id || this.init_client_id(cid)
     this.client_id = cid
@@ -71,20 +73,18 @@ export class MQTTBase ::
   // alias: publish -- because 'pub' is shorter for semantic aliases above
   async pub(pkt, pub_opt) ::
     if undefined === pkt.payload ::
-      if 'function' === typeof pub_opt ::
+      if _isfn(pub_opt) ::
+        // pub_opt as a function is fn_encode value
         pub_opt = {fn_encode: pub_opt}
 
-      let {msg} = pkt
-      switch typeof msg ::
-        case 'function':
-          pub_opt = {...pub_opt, fn_encode: msg}
-          // flow into 'undefined' case
-        case 'undefined':
-          // return a single-value closure to publish packets
-          return v => this.pub({...pkt, [pkt.arg || 'payload']: v}, pub_opt)
+      let msg = pkt.msg, fn_encode = pub_opt?.fn_encode
+      if null == msg || _isfn(msg) ::
+        // when msg is a function, return closure using fn_encode
+        if msg :: pub_opt = {...pub_opt, fn_encode: msg}
+        // return a single-value closure to publish packets
+        return v => this.pub({...pkt, [pkt.arg || 'payload']: v}, pub_opt)
 
       // Encode payload from msg; fn_encode allows alternative to JSON.stringify
-      let {fn_encode} = pub_opt || {}
       pkt.payload = fn_encode
         ? await fn_encode(msg)
         : JSON.stringify(msg)
@@ -96,7 +96,7 @@ export class MQTTBase ::
         pkt = pub_opt.xform(pkt) || pkt
 
     return this._send @ 'publish', pkt,
-      pkt.qos ? pkt : void 0 // key
+      pkt.qos ? pkt : null // key
 
 
   // Internal API
@@ -113,14 +113,13 @@ export class MQTTBase ::
   static _aliases() ::
     return ' publish:pub sub:subscribe unsub:unsubscribe json_post:obj_post json_send:obj_send json_store:obj_store'
 
-  static _once_(self=this) ::
-    self._once_ = _=>0
-    let p = self.prototype
+  static _once_(klass=this) ::
+    klass._once_ = _=>0
+    var alias, name, p = klass.prototype
     p.MQTTError = MQTTError
-    for let alias of self._aliases().split(/\s+/) ::
-      alias = alias.split(':')
-      let fn = alias[1] && p[alias[1]]
-      if fn :: p[alias[0]] = fn
+    for alias of klass._aliases().split(/\s+/) ::
+      [alias, name] = alias.split(':')
+      p[alias] = p[name]
 
 
 function _as_topics(pkt, ex, topic_prefix) ::

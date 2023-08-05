@@ -1,3 +1,4 @@
+import { _isstr } from './_utils.jsy'
 import {_mqtt_cmdids} from './_cmdid_dispatch.jsy'
 
 export function _mqtt_dispatch(opt, target) ::
@@ -14,11 +15,10 @@ export function _mqtt_dispatch(opt, target) ::
 
 
   function pkt_future(pkt_or_key) ::
-    if 'string' !== typeof pkt_or_key ::
+    if ! _isstr(pkt_or_key) ::
       _pkt_id = (_pkt_id + 1) & 0xffff // 16-bit unsigned short
       _ftr_key = pkt_or_key.pkt_id = _pkt_id
-    else ::
-      _ftr_key = pkt_or_key
+    else _ftr_key = pkt_or_key
 
     return new Promise(_ftr_by_key)
 

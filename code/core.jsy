@@ -1,3 +1,4 @@
+import { _isfn } from './_utils.jsy'
 import mqtt_pkt_ctx from 'u8-mqtt-packet/esm/codec_bind.js'
 import { MQTTBase } from './base.jsy'
 import { _mqtt_conn } from './_conn.jsy'
@@ -25,7 +26,7 @@ export class MQTTCore extends MQTTBase ::
 
   with(fns_ns) ::
     for let [k,v] of Object.entries(fns_ns) ::
-      if 'function' === typeof v :: this[k] = v
+      if _isfn(v) :: this[k] = v
     return this
 
 

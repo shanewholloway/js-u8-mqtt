@@ -2,6 +2,7 @@
 //  [regexparam]: https://github.com/lukeed/regexparam
 
 import {parse as _rxp_parse} from 'regexparam'
+import {_isfn} from './_utils.jsy'
 import {with_topic_router} from './with_topic_router.jsy'
 
 export const with_topic_path_router = /* #__PURE__ */
@@ -40,7 +41,7 @@ function mqtt_topic_path_router() ::
       let fn = args.pop()
       let priority = args.pop()
 
-      if 'function' !== typeof fn ::
+      if ! _isfn(fn) ::
         if fn :: throw new TypeError()
         fn = _ignore
 

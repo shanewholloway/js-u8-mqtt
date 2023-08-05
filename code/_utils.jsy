@@ -1,0 +1,2 @@
+export const _isfn = v => typeof v === 'function'
+export const _isstr = v => typeof v === 'string'
