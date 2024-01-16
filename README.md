@@ -1,4 +1,4 @@
-# [u8-mqtt ![npm published version][img-npm-ver]][npm-u8-mqtt] [![][img-deps] ![][img-treeshake] ![][img-min] ![][img-minzip]][bundlephobia-u8-mqtt]
+# [u8-mqtt ![npm published version][img-npm-ver]][npm-u8-mqtt]
 
 A JavaScript MQTT client using async/await support QOS-0 and QOS-1.
 for use in modern ES6 environments: the Browser, [NodeJS](https://nodejs.org/en/), and [Deno](https://deno.land/).
