@@ -17,9 +17,9 @@ const opt_default = @{}
 
 export class MQTTCore extends MQTTBase ::
   constructor(opt) ::
+    opt = {...opt_default, ...opt}
     super()
     this.with(opt)
-    opt = @{} ...opt_default, ...opt
     // settings for MQTTCore
     this.sess_stg = opt.sess_stg
     // setup connection and dispatch
