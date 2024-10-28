@@ -46,7 +46,7 @@
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-virtual": "^3.0.2",
     "qsrv": "^0.2.6",
-    "regexparam": "^2.0.2",
+    "regexparam": "^3.0.0",
     "rollup": "^3.29.5",
     "rollup-plugin-dgnotify": "^0.1.8",
     "rollup-plugin-jsy": "^1.9.2",

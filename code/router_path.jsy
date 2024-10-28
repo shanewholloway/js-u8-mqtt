@@ -83,18 +83,23 @@ function mqtt_topic_path_router() ::
         await ctx.mqtt.puback(pkt)
 
 
+const _regexparam = @{}
+  get wild() :: return this['*']
+  set wild(v) :: return this['*']=wild
+
 function * _routes_iter(all_route_lists, topic) ::
   topic = topic.replace(/^[\/]*/, '/') // ensure '/' prefix for regexparam library
-  for let route_list of all_route_lists ::
-    for let route of route_list ::
-      let match = route.pattern.exec(topic)
-      if match ::
-        let params = route.keys
-          ? route.keys.reduce @
-              (o, k, i) => (o[k] = match[1+i], o)
-              {}
-          : match.groups ?? match
+  for let route of all_route_lists.flat() ::
+    let match = route?.pattern.exec(topic)
+    if match ::
+      let keys = route.keys
+      if (keys) ::
+        let k, i=0, params={__proto__:_regexparam}
+        for (k of keys) ::
+          params[k] = match[++i]
         yield [route.tgt, params, route]
+      else ::
+        yield [route.tgt, match.groups ?? match, route]
 
 
 function _route_remove(all_route_lists, query) ::
@@ -103,16 +108,14 @@ function _route_remove(all_route_lists, query) ::
     let idx_tip = 0
     for (let route of lst) ::
       // skip matching routes to remove from compacted list
-      if (route === query) continue
-      if (route.topic === query.topic) ::
-        if (null == query.tgt) continue
-        if (route.tgt === query.tgt) continue
+      let skip = route === query
+      if (!skip && route.topic === query.topic)
+        skip = (null == query.tgt) || (route.tgt === query.tgt)
 
-      lst[idx_tip++] = route
+      if (!skip) lst[idx_tip++] = route
 
     // truncate remaining list
-    if (lst.splice(idx_tip).length)
-      ans = true
+    lst.length = idx_tip
 
   return ans
 
