@@ -45,34 +45,38 @@ function mqtt_topic_path_router() ::
         if fn :: throw new TypeError()
         fn = _ignore
 
-      let rte = _rxp_parse @ as_topic_path @ topic_route
-
-      rte.key = topic_route
-      rte.tgt = fn
-      pri_lsts[priority ? 0 : 1].push(rte)
+      let route = _rxp_parse @ as_topic_path(topic_route)
+      route.topic = topic_route
+      route.tgt = fn
+      pri_lsts[priority ? 0 : 1].push(route)
       return this
 
-    remove(topic_route, priority) ::
-      let lst = pri_lsts[priority ? 0 : 1]
-      return _route_remove([lst], topic_route)
+    remove(query, ...args) ::
+      let lst = pri_lsts
+      if ('boolean' === typeof args[0]) ::
+        lst = [pri_lsts[args.shift() ? 0 : 1]]
+
+      if ('string' === typeof query) ::
+        query = @{} topic: query, tgt: args.pop()
+      return _route_remove(lst, query)
 
     clear(priority) ::
-      pri_lsts[priority ? 0 : 1] = []
       if null == priority ::
-        pri_lsts[1] = [] // null clears both lists
+        pri_lsts = [[],[]] // null clears both lists
+      else ::
+        pri_lsts[priority ? 0 : 1] = []
 
     async invoke(pkt, ctx) ::
       ctx.idx = 0
       ctx.rm = rm
 
-      for let [fn, params] of find(pkt.topic) ::
+      for let [fn, params, route] of find(pkt.topic) ::
         let res = await fn(pkt, params, ctx)
 
         if rm === res ::
-          _route_remove(pri_lsts, fn)
+          _route_remove(pri_lsts, route)
 
-        if ctx.done ::
-          break
+        if ctx.done :: break
         else ctx.idx++
 
       if 1 === pkt.qos ::
@@ -82,26 +86,33 @@ function mqtt_topic_path_router() ::
 function * _routes_iter(all_route_lists, topic) ::
   topic = topic.replace(/^[\/]*/, '/') // ensure '/' prefix for regexparam library
   for let route_list of all_route_lists ::
-    for let {keys, pattern, tgt} of route_list ::
-      let match = pattern.exec(topic)
+    for let route of route_list ::
+      let match = route.pattern.exec(topic)
       if match ::
-        let params = keys
-          ? keys.reduce @
+        let params = route.keys
+          ? route.keys.reduce @
               (o, k, i) => (o[k] = match[1+i], o)
               {}
           : match.groups ?? match
-        yield [tgt, params]
+        yield [route.tgt, params, route]
 
 
 function _route_remove(all_route_lists, query) ::
-  let fn_match = route => @
-    route===query
-    || route.tgt===query
-    || route.key===query
+  let ans = false
   for let lst of all_route_lists ::
-    let i = lst.findIndex(fn_match)
-    if 0 <= i ::
-      lst.splice(i,1)
-      return true
-  return false
+    let idx_tip = 0
+    for (let route of lst) ::
+      // skip matching routes to remove from compacted list
+      if (route === query) continue
+      if (route.topic === query.topic) ::
+        if (null == query.tgt) continue
+        if (route.tgt === query.tgt) continue
+
+      lst[idx_tip++] = route
+
+    // truncate remaining list
+    if (lst.splice(idx_tip).length)
+      ans = true
+
+  return ans
 

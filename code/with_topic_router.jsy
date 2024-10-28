@@ -39,7 +39,10 @@ export const with_topic_router = mqtt_topic_router =>
     // alias: unsub_topic
     unsubscribe_topic(topic_route, ...args) ::
       let router = this.router
-      router.remove @ topic_route, true
+
+      let fn = args.at(-1)?.call ? args.pop() : null
+      router.remove @ topic_route, true, fn
+
       let topic = router.mqtt_topic(topic_route)
       return this.unsubscribe @ topic, ...args // topic_prefix
 

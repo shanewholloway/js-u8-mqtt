@@ -3,7 +3,7 @@ import rpi_dgnotify from 'rollup-plugin-dgnotify'
 import rpi_resolve from '@rollup/plugin-node-resolve'
 import rpi_terser from '@rollup/plugin-terser'
 import rpi_virtual from '@rollup/plugin-virtual'
-import pkg from './package.json' assert {type: 'json'}
+import pkg from './package.json' with {type: 'json'}
 
 const _rpis_ = (tag, defines, ...args) => [
   rpi_virtual({

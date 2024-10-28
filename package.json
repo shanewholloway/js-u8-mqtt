@@ -42,14 +42,14 @@
     "test"
   ],
   "devDependencies": {
-    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-node-resolve": "^15.3.0",
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-virtual": "^3.0.2",
     "qsrv": "^0.2.6",
     "regexparam": "^2.0.2",
-    "rollup": "^3.29.4",
+    "rollup": "^3.29.5",
     "rollup-plugin-dgnotify": "^0.1.8",
-    "rollup-plugin-jsy": "^1.9.1",
+    "rollup-plugin-jsy": "^1.9.2",
     "u8-mqtt-packet": "^0.4.1"
   },
   "scripts": {
