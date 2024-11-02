@@ -60,6 +60,17 @@ function mqtt_topic_path_router() ::
         query = @{} topic: query, tgt: args.pop()
       return _route_remove(lst, query)
 
+    count(topic_route) ::
+      if ! topic_route ::
+        return pri_lsts.reduce((r,l) => r+l.length, 0)
+
+      let count = 0
+      for let lst of pri_lsts ::
+        for let route of lst ::
+          if topic_route === route.topic ::
+            count++
+      return count
+
     clear(priority) ::
       if null == priority ::
         pri_lsts = [[],[]] // null clears both lists
@@ -103,19 +114,18 @@ function * _routes_iter(all_route_lists, topic) ::
 
 
 function _route_remove(all_route_lists, query) ::
-  let ans = false
+  let n_removed = 0
   for let lst of all_route_lists ::
     let idx_tip = 0
-    for (let route of lst) ::
-      // skip matching routes to remove from compacted list
-      let skip = route === query
-      if (!skip && route.topic === query.topic)
-        skip = (null == query.tgt) || (route.tgt === query.tgt)
+    for let route of lst ::
+      if route.topic === query.topic ::
+        if null == query.tgt || route.tgt === query.tgt ::
+          // skip matching routes to remove from compacted list
+          n_removed++
+          continue
 
-      if (!skip) lst[idx_tip++] = route
+      lst[idx_tip++] = route
 
     // truncate remaining list
     lst.length = idx_tip
-
-  return ans
-
+  return n_removed

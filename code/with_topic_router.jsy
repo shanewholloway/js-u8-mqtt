@@ -3,6 +3,7 @@ class AbstractTopicRouter ::
   async invoke(pkt, ctx) ::
   add(topic_route, ...args) ::
   remove(topic_route, priority) ::
+  count(topic_route) ::
   clear(priority) ::
   find(topic) :: // optional
   mqtt_topic(topic_route)
@@ -42,6 +43,8 @@ export const with_topic_router = mqtt_topic_router =>
 
       let fn = args.at(-1)?.call ? args.pop() : null
       router.remove @ topic_route, true, fn
+      if 0 !== router.count @ topic_route ::
+        return null
 
       let topic = router.mqtt_topic(topic_route)
       return this.unsubscribe @ topic, ...args // topic_prefix
