@@ -1,7 +1,7 @@
 {
   "name": "u8-mqtt",
   "description": "MQTT client using Uint8Array -- suitable for use in the Browser, NodeJS, and Deno.land.",
-  "version": "0.6.5",
+  "version": "0.6.6",
   "license": "BSD-2-Clause",
   "author": "Shane Holloway <shane.holloway@ieee.org>",
   "homepage": "https://github.com/shanewholloway/js-u8-mqtt#readme",
