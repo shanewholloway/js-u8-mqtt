@@ -71,7 +71,7 @@
     "socat:tcp:mosquitto_v20": "socat -dd tcp-listen:6883,reuseaddr,fork tcp:localhost:9893",
     "socat:ws:ejabberd": "socat -dd tcp-listen:6880,reuseaddr,fork tcp:localhost:5880",
     "socat:tcp:ejabberd": "socat -dd tcp-listen:6883,reuseaddr,fork tcp:localhost:5883",
-    "pretest": "npm -s run build",
+    "pretest": "test -f esm/index.js || npm -s run build",
     "test": "true",
     "prepublishOnly": "npm -s run compress && npm -s run test"
   }
