@@ -26,8 +26,9 @@ export class MQTTBase ::
     return this.conn.on_conn(pkt, response)
 
   async disconnect(pkt={}) ::
-    let response = await this._send0('disconnect', pkt)
-    return this.conn.on_dis(pkt, response)
+    let response = this._send0('disconnect', pkt)
+    await this.conn.on_dis(pkt, response)
+    return await response
 
   async auth(pkt={}) ::
     let response = await this._send0('auth', pkt, 'auth')

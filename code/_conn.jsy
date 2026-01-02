@@ -50,11 +50,12 @@ export function _mqtt_conn(opt, client, [on_mqtt, pkt_future]) ::
         _dfn_send0.e(err) // send error to uses of _send0 (connect, auth)
       _abort.e(err) // abort in-progress connections
 
-      delete conn.is_set
-      conn.ready = handshake()
-      client.conn_emit('on_disconnect', false===err, err)
+      if conn.is_set ::
+        delete conn.is_set
+        conn.ready = handshake()
+        client.conn_emit('on_disconnect', false===err, err)
 
-    abort() ::
+    abort(err) ::
       _dfn_ready.e(err) // abort all messages awaiting ready state
       return conn.reset(err)
 

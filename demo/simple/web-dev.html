@@ -21,6 +21,7 @@
     <button data-topic="apple">Send apple message</button>
     <button data-topic="chili">Send chili message</button>
     <button data-topic="onion">Send onion message</button>
+    <button data-op="disconnect">Disconnect</button>
   </div>
 
   <output class='output'></output>
@@ -60,7 +61,8 @@
   import mqtt_client from '/esm/web/index.js'
 
   let my_mqtt = mqtt_client()
-    .with_websock('wss://test.mosquitto.org:8081')
+    //.with_websock('wss://test.mosquitto.org:8081')
+    .with_websock('ws://127.0.0.1:6880')
     .with_autoreconnect()
 
   demo_hook_buttons(my_mqtt, send_demo_message)
@@ -92,9 +94,15 @@
 
 
   function send_demo_message(info) {
-    return my_mqtt.json_send(
-      `u8-mqtt/demo-simple/${info.topic}`,
-      { ... info,
-        now: new Date().toISOString() })
+    switch (info.op) {
+    case 'disconnect':
+      return my_mqtt.disconnect()
+
+    case 'send': default:
+      return my_mqtt.json_send(
+        `u8-mqtt/demo-simple/${info.topic}`,
+        { ... info,
+          now: new Date().toISOString() })
+    }
   }
 </script>

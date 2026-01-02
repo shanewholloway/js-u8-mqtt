@@ -24,6 +24,7 @@
     <button data-topic="apple">Send apple message</button>
     <button data-topic="chili">Send chili message</button>
     <button data-topic="onion">Send onion message</button>
+    <button data-op="disconnect">Disconnect</button>
   </div>
 
   <output class='output'></output>
@@ -95,9 +96,15 @@
 
 
   function send_demo_message(info) {
-    return my_mqtt.json_send(
-      `u8-mqtt/demo-simple/${info.topic}`,
-      { ... info,
-        now: new Date().toISOString() })
+    switch (info.op) {
+    case 'disconnect':
+      return my_mqtt.disconnect()
+
+    case 'send': default:
+      return my_mqtt.json_send(
+        `u8-mqtt/demo-simple/${info.topic}`,
+        { ... info,
+          now: new Date().toISOString() })
+    }
   }
 </script>

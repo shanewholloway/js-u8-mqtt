@@ -71,7 +71,7 @@ export class MQTTCore extends MQTTBase ::
 
   // on_ready(client) ::
   // on_reconnect(client) ::
-  on_disconnect(client, intentional) ::
+  on_disconnect(client, intentional, err) ::
     if ! intentional ::
       return client.on_reconnect?.()
 
@@ -81,12 +81,12 @@ export class MQTTCore extends MQTTBase ::
     if opt.toFixed :: opt = @{} delay: opt
     return this.with @:
       on_reconnect() ::
-        this.delay(opt.delay || 2000)
+        this.delay(opt.delay || 2000, opt.jitter)
           .then(this.reconnect)
           .then(opt.reconnect, opt.error)
 
-  delay(ms) ::
-    return new Promise @ done => setTimeout(done, ms)
+  delay(ms, ms_jitter=0.2*ms) ::
+    return new Promise @ done => setTimeout(done, 0 | (ms + ms_jitter*Math.random()))
 
   with_async_iter(async_iter, write_u8_pkt) ::
     this.conn.setup @ async_iter,
@@ -181,6 +181,9 @@ export class MQTTCore extends MQTTBase ::
       (on_mqtt_chunk, conn) => ::
         websock.onmessage = evt => @
           on_mqtt_chunk @ new Uint8Array(evt.data)
+
+        websock.onerror = evt => ::
+          conn.reset(new Error('websocket error'))
 
         websock.onclose = evt => ::
           if ! evt.wasClean ::
