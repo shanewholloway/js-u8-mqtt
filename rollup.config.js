@@ -1,5 +1,4 @@
-import rpi_jsy from 'rollup-plugin-jsy'
-import rpi_dgnotify from 'rollup-plugin-dgnotify'
+import rpi_jsy from '@jsy-lang/jsy/esm/rollup.js'
 import rpi_resolve from '@rollup/plugin-node-resolve'
 import rpi_terser from '@rollup/plugin-terser'
 import rpi_virtual from '@rollup/plugin-virtual'
@@ -12,7 +11,7 @@ const _rpis_ = (tag, defines, ...args) => [
   rpi_jsy({defines}),
   rpi_resolve(),
   ...args,
-  rpi_dgnotify()]
+]
 
 const _cfg_ = {
   external: id => /^\w*:/.test(id),

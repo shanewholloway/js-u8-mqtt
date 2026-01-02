@@ -38,22 +38,21 @@
     }
   },
   "workspaces": [
-    "demo",
-    "test"
+    "demo"
   ],
   "devDependencies": {
-    "@rollup/plugin-node-resolve": "^15.3.0",
+    "@jsy-lang/jsy": "^0.10.9",
+    "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-terser": "^0.4.4",
     "@rollup/plugin-virtual": "^3.0.2",
-    "qsrv": "^0.2.6",
     "regexparam": "^3.0.0",
-    "rollup": "^3.29.5",
-    "rollup-plugin-dgnotify": "^0.1.8",
-    "rollup-plugin-jsy": "^1.9.2",
-    "u8-mqtt-packet": "^0.4.1"
+    "rollup": "^4.54.0",
+    "u8-mqtt-packet": "^0.4.1",
+    "vite": "^7.3.0"
   },
   "scripts": {
-    "serve": "qsrv -- *.html esm/",
+    "vite": "vite",
+    "serve": "vite",
     "clean": "rm -rf ./cjs/* ./esm/*",
     "prebuild": "test -d ./node_modules || npm -s ci",
     "build": "rollup --config",
@@ -66,12 +65,12 @@
     "demo:node_v5": "node ./demo/node_v5.js",
     "demo:deno_v4": "deno run --allow-net --allow-env=U8_MQTT ./demo/deno_v4.js",
     "demo:deno_v5": "deno run --allow-net --allow-env=U8_MQTT ./demo/deno_v5.js",
-    "socat:ws:mosquitto_v16": "nix-shell -p socat --run 'socat -dd tcp-listen:6880,reuseaddr,fork tcp:localhost:9880'",
-    "socat:tcp:mosquitto_v16": "nix-shell -p socat --run 'socat -dd tcp-listen:6883,reuseaddr,fork tcp:localhost:9883'",
-    "socat:ws:mosquitto_v20": "nix-shell -p socat --run 'socat -dd tcp-listen:6880,reuseaddr,fork tcp:localhost:9890'",
-    "socat:tcp:mosquitto_v20": "nix-shell -p socat --run 'socat -dd tcp-listen:6883,reuseaddr,fork tcp:localhost:9893'",
-    "socat:ws:ejabberd": "nix-shell -p socat --run 'socat -dd tcp-listen:6880,reuseaddr,fork tcp:localhost:5880'",
-    "socat:tcp:ejabberd": "nix-shell -p socat --run 'socat -dd tcp-listen:6883,reuseaddr,fork tcp:localhost:5883'",
+    "socat:ws:mosquitto_v16": "socat -dd tcp-listen:6880,reuseaddr,fork tcp:localhost:9880",
+    "socat:tcp:mosquitto_v16": "socat -dd tcp-listen:6883,reuseaddr,fork tcp:localhost:9883",
+    "socat:ws:mosquitto_v20": "socat -dd tcp-listen:6880,reuseaddr,fork tcp:localhost:9890",
+    "socat:tcp:mosquitto_v20": "socat -dd tcp-listen:6883,reuseaddr,fork tcp:localhost:9893",
+    "socat:ws:ejabberd": "socat -dd tcp-listen:6880,reuseaddr,fork tcp:localhost:5880",
+    "socat:tcp:ejabberd": "socat -dd tcp-listen:6883,reuseaddr,fork tcp:localhost:5883",
     "pretest": "npm -s run build",
     "test": "cd test; npm -s run test",
     "prepublishOnly": "npm -s run compress && npm -s run test"
