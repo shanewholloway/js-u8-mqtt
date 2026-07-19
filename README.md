@@ -48,6 +48,7 @@ Targeting [MQTT-3.1.1 (v4)][spec-3.1.1] and [MQTT-5.0.0 (v5)][spec-5.0.0] compat
 - from [Web bundler](./docs/use_from_web_bundler.md) like [Rollup][] or [ESBuild][]
 - from [NodeJS](./docs/use_from_nodejs.md)
 - from [Deno](./docs/use_from_deno.md)
+- from [TypeScript](./docs/use_from_typescript.md)
 
  [Rollup]: https://rollupjs.org
  [ESBuild]: https://esbuild.github.io

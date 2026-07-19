@@ -209,7 +209,8 @@ export interface TopicRouter {
 	find?(
 		topic: string,
 	): Iterable<[OnTopicCallback, Record<string, string>, unknown]>;
-	invoke(pkt: PublishPacket, ctx: TopicRouteContext): Promise<void>;
+	/** receives the mutable session ctx; extends it with `idx`/`rm` */
+	invoke(pkt: PublishPacket, ctx: SessionContext): Promise<void>;
 }
 
 //
@@ -252,10 +253,41 @@ export interface MQTTCoreOptions {
 	/** low-level `mqtt_{type}(pkt, ctx)` handlers, e.g. `mqtt_publish` */
 	on_mqtt_type?: Record<
 		string,
-		(pkt: PacketBase, ctx: TopicRouteContext) => unknown
+		(pkt: PacketBase, ctx: SessionContext) => unknown
 	>;
 
 	[k: string]: unknown;
+}
+
+//
+// Connection lifecycle (see code/_conn.jsy)
+//
+
+export interface MQTTConn {
+	/** resolves true once connected+ready, false on reset/abort */
+	ready: Promise<boolean>;
+	has_connected?: boolean;
+	/** negotiated keep alive interval, seconds */
+	keep_alive?: number;
+	/** true while a transport is attached */
+	is_set?: boolean;
+	/** (re)start the keep-alive ping interval */
+	ping(td?: number): boolean | undefined;
+	/** tear down the current transport; `false` marks an intentional disconnect */
+	reset(err?: Error | false): void;
+	/** reset + reject all messages awaiting the ready state */
+	abort(err?: Error): void;
+	/** attach a transport: gate promise, outbound writer, inbound loop initializer */
+	setup(
+		gate: unknown,
+		send_u8_pkt:
+			| ((u8_pkt: Uint8Array) => unknown)
+			| PromiseLike<(u8_pkt: Uint8Array) => unknown>,
+		init_msg_loop: (
+			on_mqtt_chunk: (u8: Uint8Array) => void,
+			conn: MQTTConn,
+		) => unknown,
+	): Promise<void>;
 }
 
 //
@@ -291,9 +323,12 @@ export declare class MQTTBase {
 		pkt: SubscribeArg,
 		ex?: SubscribeExtra | string,
 		topic_prefix?: string,
-	): Promise<Either<SubAckPacket>>;
+	): SubAckPromise;
 	/** alias for {@link MQTTBase.subscribe} */
 	sub: MQTTBase['subscribe'];
+
+	/** hook: called with the pending suback promise and the subscribe packet */
+	on_sub?(suback: SubAckPromise, pkt: SubscribePkt): SubAckPromise;
 
 	unsubscribe(
 		pkt: SubscribeArg,
@@ -303,11 +338,20 @@ export declare class MQTTBase {
 	/** alias for {@link MQTTBase.unsubscribe} */
 	unsub: MQTTBase['unsubscribe'];
 
-	/** returns a topic-bound publish closure when payload/msg is omitted */
+	/**
+	 * When `payload`/`msg` are omitted (or `msg` is a function, used as
+	 * `fn_encode`), resolves to a topic-bound publish closure instead
+	 * of sending -- note the closure itself is wrapped in a Promise
+	 * because `pub` is async.
+	 */
+	pub(
+		pkt: PubPacket & { payload?: undefined; msg?: undefined },
+		pub_opt?: PubOptions | EncodeFn,
+	): Promise<PubClosure>;
 	pub<T = unknown>(
-		pkt: PubMsgPacket<T> & { msg: EncodeFn<T> | null },
+		pkt: Omit<PubMsgPacket<T>, 'msg'> & { msg: EncodeFn<T> | null },
 		pub_opt?: PubOptions<T> | EncodeFn<T>,
-	): PubClosure<T>;
+	): Promise<PubClosure<T>>;
 	pub<T = unknown>(
 		pkt: PubPacket | PubMsgPacket<T>,
 		pub_opt?: PubOptions<T> | EncodeFn<T>,
@@ -316,31 +360,31 @@ export declare class MQTTBase {
 	publish: MQTTBase['pub'];
 
 	/** `pub({topic, payload, qos: 0})` */
-	post(topic: string): PubClosure;
+	post(topic: string): Promise<PubClosure>;
 	post(topic: string, payload: AcceptablePayload, pub_opt?: PubOptions): PubResult;
 	/** `pub({topic, payload, qos: 1})` */
-	send(topic: string): PubClosure;
+	send(topic: string): Promise<PubClosure>;
 	send(topic: string, payload: AcceptablePayload, pub_opt?: PubOptions): PubResult;
 	/** `pub({topic, payload, qos: 1, retain: 1})` */
-	store(topic: string): PubClosure;
+	store(topic: string): Promise<PubClosure>;
 	store(topic: string, payload: AcceptablePayload, pub_opt?: PubOptions): PubResult;
 
 	/** JSON/`fn_encode` variant of {@link MQTTBase.post} (qos 0) */
-	obj_post<T = unknown>(topic: string, msg?: EncodeFn<T> | null): PubClosure<T>;
+	obj_post<T = unknown>(topic: string, msg?: EncodeFn<T> | null): Promise<PubClosure<T>>;
 	obj_post<T = unknown>(
 		topic: string,
 		msg: T,
 		pub_opt?: PubOptions<T> | EncodeFn<T>,
 	): PubResult;
 	/** JSON/`fn_encode` variant of {@link MQTTBase.send} (qos 1) */
-	obj_send<T = unknown>(topic: string, msg?: EncodeFn<T> | null): PubClosure<T>;
+	obj_send<T = unknown>(topic: string, msg?: EncodeFn<T> | null): Promise<PubClosure<T>>;
 	obj_send<T = unknown>(
 		topic: string,
 		msg: T,
 		pub_opt?: PubOptions<T> | EncodeFn<T>,
 	): PubResult;
 	/** JSON/`fn_encode` variant of {@link MQTTBase.store} (qos 1, retain) */
-	obj_store<T = unknown>(topic: string, msg?: EncodeFn<T> | null): PubClosure<T>;
+	obj_store<T = unknown>(topic: string, msg?: EncodeFn<T> | null): Promise<PubClosure<T>>;
 	obj_store<T = unknown>(
 		topic: string,
 		msg: T,
@@ -359,6 +403,8 @@ export declare class MQTTCore extends MQTTBase {
 	constructor(opt?: MQTTCoreOptions);
 
 	sess_stg?: StorageLike | null;
+	/** connection lifecycle manager (see code/_conn.jsy) */
+	conn: MQTTConn;
 	/** set by `with_tcp` / `with_tls` / `with_websock(url)`; re-dials the transport */
 	reconnect?: () => unknown;
 
@@ -381,6 +427,8 @@ export declare class MQTTCore extends MQTTBase {
 
 	on_live(client: this, is_reconnect?: boolean): unknown;
 	on_disconnect(client: this, intentional: boolean, err?: unknown): unknown;
+	/** set by `with_autoreconnect`, or user-provided */
+	on_reconnect?(): unknown;
 
 	with_autoreconnect(opt?: number | AutoReconnectOptions): this;
 	delay(ms: number, ms_jitter?: number): Promise<void>;
@@ -389,7 +437,9 @@ export declare class MQTTCore extends MQTTBase {
 		async_iter:
 			| AsyncIterable<Uint8Array>
 			| PromiseLike<AsyncIterable<Uint8Array>>,
-		write_u8_pkt: (u8_pkt: Uint8Array) => unknown,
+		write_u8_pkt:
+			| ((u8_pkt: Uint8Array) => unknown)
+			| PromiseLike<(u8_pkt: Uint8Array) => unknown>,
 	): this;
 
 	/** node/deno builds */
@@ -441,6 +491,12 @@ export declare class MQTTRouterCore extends MQTTCore {
 	): Promise<Either<AckPacket>> | null;
 	unsubscribe_topic(
 		topic_route: string,
+		ex: SubscribeExtra | string,
+		fn?: OnTopicCallback,
+	): Promise<Either<AckPacket>> | null;
+	unsubscribe_topic(
+		topic_route: string,
+		ex: SubscribeExtra,
 		topic_prefix: string,
 		fn?: OnTopicCallback,
 	): Promise<Either<AckPacket>> | null;
@@ -460,11 +516,23 @@ export declare class MQTTRouterCore extends MQTTCore {
 
 	/** settle all subscribe acks queued by {@link MQTTRouterCore.subscribe_topic} */
 	subs_settled(): Promise<PromiseSettledResult<Either<SubAckPacket>>[]>;
+	/** hook wired by the router mixin: tracks subacks for {@link MQTTRouterCore.subs_settled} */
+	on_sub(suback: SubAckPromise, pkt: SubscribePkt): SubAckPromise;
 }
 
 //
 // Router factories
 //
+
+/** constructor type produced by the router mixins */
+export type MQTTRouterClass<K extends typeof MQTTCore> = Omit<
+	K,
+	'prototype'
+> &
+	Omit<typeof MQTTRouterCore, 'prototype'> & {
+		new (opt?: MQTTCoreOptions): InstanceType<K> & MQTTRouterCore;
+		prototype: InstanceType<K> & MQTTRouterCore;
+	};
 
 export declare function with_topic_router(
 	mqtt_topic_router: (
@@ -472,11 +540,11 @@ export declare function with_topic_router(
 		client: MQTTCore,
 		target: unknown,
 	) => TopicRouter,
-): <K extends typeof MQTTCore>(klass: K) => K & typeof MQTTRouterCore;
+): <K extends typeof MQTTCore>(klass: K) => MQTTRouterClass<K>;
 
 export declare function with_topic_path_router<K extends typeof MQTTCore>(
 	klass: K,
-): K & typeof MQTTRouterCore;
+): MQTTRouterClass<K>;
 
 /** translate an MQTT topic filter into a route path (`+` -> `:$n`, `#` -> `*`) */
 export declare function as_topic_path(topic_route: string): string;
@@ -488,8 +556,8 @@ export declare function as_topic_path(topic_route: string): string;
 export declare function _mqtt_conn(
 	opt: MQTTCoreOptions,
 	client: MQTTCore,
-	dispatch: [on_mqtt: unknown, pkt_future: unknown],
-): unknown;
+	dispatch: ReturnType<typeof _mqtt_dispatch>,
+): MQTTConn;
 
 export declare function _mqtt_dispatch(
 	opt: MQTTCoreOptions,
