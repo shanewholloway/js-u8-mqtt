@@ -15,26 +15,128 @@
   "files": [
     "cjs/",
     "code/",
-    "esm/"
+    "esm/",
+    "types/"
   ],
   "type": "module",
   "main": "./cjs/index.cjs",
   "module": "./esm/index.js",
   "browser": "./esm/web/index.min.js",
+  "types": "./types/index.d.ts",
   "exports": {
+    "./esm/index.js": {
+      "types": "./types/index.d.ts",
+      "default": "./esm/index.js"
+    },
+    "./esm/web/index.js": {
+      "types": "./types/index.d.ts",
+      "default": "./esm/web/index.js"
+    },
+    "./esm/node/index.js": {
+      "types": "./types/index.d.ts",
+      "default": "./esm/node/index.js"
+    },
+    "./esm/deno/index.js": {
+      "types": "./types/index.d.ts",
+      "default": "./esm/deno/index.js"
+    },
+    "./esm/*.js": {
+      "types": "./types/*.d.ts",
+      "default": "./esm/*.js"
+    },
+    "./esm/web/*.js": {
+      "types": "./types/*.d.ts",
+      "default": "./esm/web/*.js"
+    },
+    "./esm/web/*.min.js": {
+      "types": "./types/*.d.ts",
+      "default": "./esm/web/*.min.js"
+    },
+    "./esm/node/*.js": {
+      "types": "./types/*.d.ts",
+      "default": "./esm/node/*.js"
+    },
+    "./esm/node/*.mjs": {
+      "types": "./types/*.d.ts",
+      "default": "./esm/node/*.mjs"
+    },
+    "./esm/deno/*.js": {
+      "types": "./types/*.d.ts",
+      "default": "./esm/deno/*.js"
+    },
     "./esm/*": "./esm/*",
+    "./cjs/index.cjs": {
+      "types": "./types/index.d.ts",
+      "default": "./cjs/index.cjs"
+    },
+    "./cjs/*.cjs": {
+      "types": "./types/*.d.ts",
+      "default": "./cjs/*.cjs"
+    },
     "./cjs/*": "./cjs/*",
-    "./web": "./esm/web/index.js",
-    "./deno": "./esm/deno/index.js",
-    "./node": "./esm/node/index.js",
-    "./core": "./esm/index.js",
+    "./types/*": "./types/*",
+    "./web": {
+      "types": "./types/index.d.ts",
+      "default": "./esm/web/index.js"
+    },
+    "./deno": {
+      "types": "./types/index.d.ts",
+      "default": "./esm/deno/index.js"
+    },
+    "./node": {
+      "types": "./types/index.d.ts",
+      "default": "./esm/node/index.js"
+    },
+    "./core": {
+      "types": "./types/index.d.ts",
+      "default": "./esm/index.js"
+    },
     ".": {
+      "types": "./types/index.d.ts",
       "browser": "./esm/web/index.js",
       "deno": "./esm/deno/index.js",
       "require": "./cjs/index.cjs",
       "node": "./esm/node/index.js",
       "import": "./esm/index.js",
       "default": "./esm/index.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "types/*": ["./types/*"],
+      "web": ["./types/index.d.ts"],
+      "deno": ["./types/index.d.ts"],
+      "node": ["./types/index.d.ts"],
+      "core": ["./types/index.d.ts"],
+      "esm/index.js": ["./types/index.d.ts"],
+      "esm/*/index.js": ["./types/index.d.ts"],
+      "esm/*/index.min.js": ["./types/index.d.ts"],
+      "esm/v4.js": ["./types/v4.d.ts"],
+      "esm/*/v4.js": ["./types/v4.d.ts"],
+      "esm/*/v4.min.js": ["./types/v4.d.ts"],
+      "esm/v5.js": ["./types/v5.d.ts"],
+      "esm/*/v5.js": ["./types/v5.d.ts"],
+      "esm/*/v5.min.js": ["./types/v5.d.ts"],
+      "esm/basic-v4.js": ["./types/basic-v4.d.ts"],
+      "esm/*/basic-v4.js": ["./types/basic-v4.d.ts"],
+      "esm/*/basic-v4.min.js": ["./types/basic-v4.d.ts"],
+      "esm/basic-v5.js": ["./types/basic-v5.d.ts"],
+      "esm/*/basic-v5.js": ["./types/basic-v5.d.ts"],
+      "esm/*/basic-v5.min.js": ["./types/basic-v5.d.ts"],
+      "esm/full-v4.js": ["./types/full-v4.d.ts"],
+      "esm/*/full-v4.js": ["./types/full-v4.d.ts"],
+      "esm/*/full-v4.min.js": ["./types/full-v4.d.ts"],
+      "esm/full-v5.js": ["./types/full-v5.d.ts"],
+      "esm/*/full-v5.js": ["./types/full-v5.d.ts"],
+      "esm/*/full-v5.min.js": ["./types/full-v5.d.ts"],
+      "cjs/index.cjs": ["./types/index.d.ts"],
+      "cjs/v4.cjs": ["./types/v4.d.ts"],
+      "cjs/v5.cjs": ["./types/v5.d.ts"],
+      "cjs/basic-v4.cjs": ["./types/basic-v4.d.ts"],
+      "cjs/basic-v5.cjs": ["./types/basic-v5.d.ts"],
+      "cjs/full-v4.cjs": ["./types/full-v4.d.ts"],
+      "cjs/full-v5.cjs": ["./types/full-v5.d.ts"],
+      "*": ["./types/index.d.ts"]
     }
   },
   "workspaces": [
